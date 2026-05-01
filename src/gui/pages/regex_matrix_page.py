@@ -9,13 +9,19 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QFont
 from .base_page import BasePage
-from ..fonts import mi, material_font
+from ..fonts import mi
+from regex_module.preprocessor import (
+    expand, to_display, validate, PreprocessorError,
+)
+from regex_module.validator  import validate_expanded
+from regex_module.tokenizer  import tokenize as tokenize_expanded
+from regex_module.parser     import parse
 
 
-MAX_EXPR_LEN = 40
+MAX_EXPR_LEN = 30
 LETTER_KEYS: List[str] = list("abcdefghijklmnopqrstuvwxyz")
 DIGIT_KEYS:  List[str] = [str(d) for d in range(10)]
-SYMBOL_KEYS: List[str] = ["+", "*", "(", ")", "∅", "Λ"]
+SYMBOL_KEYS: List[str] = ["+", "*", "(", ")", "Φ", "Λ"]
 CONTROL_KEYS: List[str] = ["Undo", "Redo", "Del", "AC", "="]
 SUP_DIGIT_MAP = {
     "¹": "^1", "²": "^2", "³": "^3", "⁴": "^4", "⁵": "^5",
@@ -23,107 +29,22 @@ SUP_DIGIT_MAP = {
 }
 SUP_REVERSE_LABEL = "ᴿ"
 SUP_REVERSE_TOKEN = "^R"
-SUP_KEYS_LABELS: List[str] = list(SUP_DIGIT_MAP.keys()) + [SUP_REVERSE_LABEL]
-_SUP_DISPLAY: dict[str, str] = {v: k for k, v in SUP_DIGIT_MAP.items()}
-_SUP_DISPLAY[SUP_REVERSE_TOKEN] = SUP_REVERSE_LABEL
+SUP_POSITIVE_LABEL = "⁺"         
+SUP_POSITIVE_TOKEN = "^+"           
+SUP_KEYS_LABELS: List[str] = (
+    list(SUP_DIGIT_MAP.keys()) + [SUP_REVERSE_LABEL, SUP_POSITIVE_LABEL]
+)
 
+def _build_display_text(expr: str) -> str:
+    return to_display(expr)
 
-def to_display(expr: str) -> str:
-    result = []
-    i = 0
-    while i < len(expr):
-        if expr[i] == "^" and i + 1 < len(expr):
-            nxt = expr[i + 1]
-            if nxt.upper() == "R":
-                result.append(SUP_REVERSE_LABEL)
-                i += 2
-                continue
-            if nxt.isdigit():
-                j = i + 1
-                while j < len(expr) and expr[j].isdigit():
-                    j += 1
-                digits = expr[i + 1:j]
-                sup_digits = "".join(
-                    _SUP_DISPLAY.get(f"^{d}", d) for d in digits
-                )
-                result.append(sup_digits)
-                i = j
-                continue
-        result.append(expr[i])
-        i += 1
-    return "".join(result)
+def _compute_expanded(expr: str) -> tuple[str, bool]:
+    try:
+        result = expand(expr)
+        return result, True
+    except PreprocessorError:
+        return "", False
 
-def _tokenise(expr: str) -> List[str]:
-    tokens: List[str] = []
-    i = 0
-    while i < len(expr):
-        ch = expr[i]
-        if ch == "(":
-            depth = 0
-            j = i
-            while j < len(expr):
-                if expr[j] == "(":
-                    depth += 1
-                elif expr[j] == ")":
-                    depth -= 1
-                    if depth == 0:
-                        tokens.append(expr[i:j + 1])
-                        i = j + 1
-                        break
-                j += 1
-            else:
-                for c in expr[i:]:
-                    tokens.append(c)
-                i = len(expr)
-            continue
-        if ch == "^" and i + 1 < len(expr):
-            nxt = expr[i + 1]
-            if nxt.upper() == "R":
-                tokens.append("^R")
-                i += 2
-                continue
-            if nxt.isdigit():
-                j = i + 1
-                while j < len(expr) and expr[j].isdigit():
-                    j += 1
-                tokens.append("^" + expr[i + 1:j])
-                i = j
-                continue
-        tokens.append(ch)
-        i += 1
-    return tokens
-
-def _inner_text(token: str) -> str:
-    if token.startswith("(") and token.endswith(")"):
-        return token[1:-1]
-    return token
-
-def parse_expression(expr: str) -> str:
-    if not expr:
-        return ""
-
-    tokens = _tokenise(expr)
-    acc: str = ""
-
-    for tok in tokens:
-        if tok.startswith("^"):
-            op = tok[1:]
-            if op.upper() == "R":
-                acc = acc[::-1]
-            else:
-                try:
-                    n = int(op)
-                    if n > 0:
-                        acc = acc * n
-                except ValueError:
-                    pass
-        else:
-            if tok.startswith("(") and tok.endswith(")"):
-                acc += parse_expression(_inner_text(tok))
-            else:
-                acc += tok
-
-    return acc
 
 class RegexMatrixPage(BasePage):
 
@@ -174,13 +95,11 @@ class RegexMatrixPage(BasePage):
 
         expr_col = QVBoxLayout()
         expr_col.setSpacing(3)
-
         raw_caption = QLabel("INPUT")
         raw_caption.setStyleSheet(
             "color: #888888; font-size: 9px; font-weight: 900; "
             "letter-spacing: 3px; background: transparent; border: none;"
         )
-
         self._expr_label = QLabel("…")
         self._expr_label.setFont(QFont("Consolas", 18, QFont.Weight.Bold))
         self._expr_label.setStyleSheet(
@@ -188,7 +107,6 @@ class RegexMatrixPage(BasePage):
         )
         self._expr_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         self._expr_label.setTextFormat(Qt.TextFormat.PlainText)
-
         expr_col.addWidget(raw_caption)
         expr_col.addWidget(self._expr_label)
         display_layout.addLayout(expr_col, 2)
@@ -203,13 +121,11 @@ class RegexMatrixPage(BasePage):
 
         out_col = QVBoxLayout()
         out_col.setSpacing(3)
-
         out_caption = QLabel("EXPANDED")
         out_caption.setStyleSheet(
             "color: #888888; font-size: 9px; font-weight: 900; "
             "letter-spacing: 3px; background: transparent; border: none;"
         )
-
         self._result_label = QLabel("…")
         self._result_label.setFont(QFont("Consolas", 18, QFont.Weight.Bold))
         self._result_label.setStyleSheet(
@@ -217,16 +133,23 @@ class RegexMatrixPage(BasePage):
         )
         self._result_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         self._result_label.setTextFormat(Qt.TextFormat.PlainText)
-
         out_col.addWidget(out_caption)
         out_col.addWidget(self._result_label)
         display_layout.addLayout(out_col, 2)
 
         panel_layout.addWidget(display_frame)
 
+        self._error_label = QLabel("")
+        self._error_label.setStyleSheet(
+            "color: #FF2020; font-size: 10px; font-weight: 700; "
+            "background: transparent; border: none;"
+        )
+        self._error_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self._error_label.setVisible(False)
+        panel_layout.addWidget(self._error_label)
+
         mode_row = QHBoxLayout()
         mode_row.setSpacing(10)
-
         self._letters_btn = QPushButton("Aa  Letters")
         self._letters_btn.setCheckable(True)
         self._letters_btn.setChecked(True)
@@ -298,7 +221,14 @@ class RegexMatrixPage(BasePage):
         sup_row = QHBoxLayout()
         sup_row.setSpacing(5)
         for label in SUP_KEYS_LABELS:
-            token = SUP_DIGIT_MAP.get(label, SUP_REVERSE_TOKEN)
+            if label in SUP_DIGIT_MAP:
+                token = SUP_DIGIT_MAP[label]
+            elif label == SUP_REVERSE_LABEL:
+                token = SUP_REVERSE_TOKEN
+            elif label == SUP_POSITIVE_LABEL:
+                token = SUP_POSITIVE_TOKEN  
+            else:
+                token = label
             btn = self._make_key(label, "KeySuper", token)
             sup_row.addWidget(btn)
         sup_row.addStretch()
@@ -339,7 +269,6 @@ class RegexMatrixPage(BasePage):
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.clicked.connect(lambda _=False, t=token: self.handle_input(t))
         btn.setStyleSheet(self._key_style(obj_name))
-
         if obj_name == "KeySuper":
             btn.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
         return btn
@@ -349,6 +278,7 @@ class RegexMatrixPage(BasePage):
             self._push_undo()
             self._set_expression("")
             self._redo_stack.clear()
+            self._clear_error()
 
         elif key == "Del":
             if self._expression:
@@ -362,36 +292,65 @@ class RegexMatrixPage(BasePage):
                 self._redo_stack.append(self._expression)
                 self._expression = self._undo_stack.pop()
                 self._refresh_display()
+                self._clear_error()
 
         elif key == "Redo":
             if self._redo_stack:
                 self._undo_stack.append(self._expression)
                 self._expression = self._redo_stack.pop()
                 self._refresh_display()
+                self._clear_error()
 
         elif key == "=":
             if self._expression:
-                self._flash_result(success=True)
+                self._evaluate()
 
         else:
-            if key.startswith("^") and key[1:].isdigit():
-                candidate = self._expression + key
-                expanded_preview = parse_expression(candidate)
-                if len(expanded_preview) > 30:
-                    self._flash_result(success=False)
-                    return
+            candidate = self._expression + key
+            try:
+                validate(candidate, check_brackets=False)
+            except PreprocessorError as err:
+                self._flash_result(success=False)
+                self._show_error(str(err))
+                return
 
-            if len(self._expression) < MAX_EXPR_LEN:
+            try:
+                expanded = expand(candidate, check_brackets=False)
+                if len(expanded) > MAX_EXPR_LEN:
+                    self._flash_result(success=False)
+                    self._show_error(f"Expanded regex is too long ({len(expanded)} chars, max {MAX_EXPR_LEN}).")
+                    return
+            except PreprocessorError:
+                pass
+
+            if len(candidate) <= MAX_EXPR_LEN:
                 self._push_undo()
-                self._set_expression(self._expression + key)
+                self._set_expression(candidate)
                 self._redo_stack.clear()
+                self._clear_error()
+
+    def _evaluate(self) -> None:
+        try:
+            expanded = expand(self._expression)
+            if len(expanded) > MAX_EXPR_LEN:
+                raise PreprocessorError(
+                    f"Expanded regex is too long ({len(expanded)} chars, max {MAX_EXPR_LEN})."
+                )
+            validate_expanded(expanded)
+            tokens   = tokenize_expanded(expanded)
+            tree     = parse(tokens)
+            self._flash_result(success=True)
+            self._clear_error()
+        except PreprocessorError as err:
+            self._flash_result(success=False)
+            self._show_error(str(err))
 
     @staticmethod
     def _delete_last_token(expr: str) -> str:
         if not expr:
             return expr
         import re as _re
-        m = _re.search(r'\^R$|\^\d+$', expr, _re.IGNORECASE)
+        m = _re.search(r'\^R$|\^\+$|\^\d$', expr, _re.IGNORECASE)
         if m:
             return expr[:m.start()]
         if expr.endswith(")"):
@@ -413,10 +372,24 @@ class RegexMatrixPage(BasePage):
         self._refresh_display()
 
     def _refresh_display(self) -> None:
-        display_text = to_display(self._expression) if self._expression else "…"
+        display_text = _build_display_text(self._expression) if self._expression else "…"
         self._expr_label.setText(display_text)
-        expanded = parse_expression(self._expression)
-        self._result_label.setText(expanded if expanded else "…")
+        expanded, ok = _compute_expanded(self._expression)
+        if ok and expanded:
+            self._result_label.setText(expanded)
+            self._result_label.setStyleSheet(
+                "color: #FFFFFF; background: transparent; border: none;"
+            )
+        elif not self._expression:
+            self._result_label.setText("…")
+            self._result_label.setStyleSheet(
+                "color: #FFFFFF; background: transparent; border: none;"
+            )
+        else:
+            self._result_label.setText("…")
+            self._result_label.setStyleSheet(
+                "color: #888888; background: transparent; border: none;"
+            )
 
     def _flash_result(self, success: bool) -> None:
         ok_style = (
@@ -428,9 +401,17 @@ class RegexMatrixPage(BasePage):
             "border: 2px solid #111111; border-radius: 0px;"
         )
         normal_style = "color: #FFFFFF; background: transparent; border: none;"
-
         self._result_label.setStyleSheet(ok_style if success else err_style)
         QTimer.singleShot(500, lambda: self._result_label.setStyleSheet(normal_style))
+
+    def _show_error(self, msg: str) -> None:
+        self._error_label.setText(f"⚠ {msg}")
+        self._error_label.setVisible(True)
+        QTimer.singleShot(3000, self._clear_error)
+
+    def _clear_error(self) -> None:
+        self._error_label.setText("")
+        self._error_label.setVisible(False)
 
     def _switch_mode(self, mode: str) -> None:
         if mode == self._mode:
@@ -443,11 +424,11 @@ class RegexMatrixPage(BasePage):
         self._rebuild_keyboard()
         self._letters_btn.setChecked(mode == "letters")
         self._digits_btn.setChecked(mode == "digits")
+        self._clear_error()
 
     def play_enter_animation(self) -> None:
         self._panel_shown = False
         self._calc_panel.hide()
-
         super().play_enter_animation()
         self._watch_for_typing_done()
 
