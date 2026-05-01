@@ -5,9 +5,14 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QFrame, QGridLayout, QScrollArea,
+    QFrame, QGridLayout, QScrollArea, QTabWidget, QTableWidget,
+    QTableWidgetItem, QHeaderView, QLineEdit, QSizePolicy, QSplitter,
+    QAbstractItemView, QStackedWidget
 )
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QPixmap, QImage
+import os
+import tempfile
+
 from .base_page import BasePage
 from ..fonts import mi
 from regex_module.preprocessor import (
@@ -16,6 +21,13 @@ from regex_module.preprocessor import (
 from regex_module.validator  import validate_expanded
 from regex_module.tokenizer  import tokenize as tokenize_expanded
 from regex_module.parser     import parse
+from regex_module.nfa        import build_nfa
+from regex_module.dfa        import build_dfa
+from regex_module.dfa_minimizer import minimize_dfa
+from regex_module.cfg        import build_cfg
+from regex_module.string_generator import generate_strings
+from regex_module.english_phrase import describe_language
+from graphviz.backend.execute import ExecutableNotFound
 
 
 MAX_EXPR_LEN = 30
@@ -63,6 +75,14 @@ class RegexMatrixPage(BasePage):
 
         self._build_calculator_panel()
         self._calc_panel.hide()
+
+        self._build_results_panel()
+        self._temp_dir = tempfile.mkdtemp()
+        self._min_dfa = None
+        self._sim_timer = QTimer()
+        self._sim_timer.timeout.connect(self._sim_step)
+        self._sim_steps = []
+        self._sim_current_step = 0
 
     def _build_calculator_panel(self) -> None:
         self._calc_panel = QFrame()
@@ -279,6 +299,7 @@ class RegexMatrixPage(BasePage):
             self._set_expression("")
             self._redo_stack.clear()
             self._clear_error()
+            self._hide_results_panel()
 
         elif key == "Del":
             if self._expression:
@@ -341,9 +362,657 @@ class RegexMatrixPage(BasePage):
             tree     = parse(tokens)
             self._flash_result(success=True)
             self._clear_error()
+            
+            nfa = build_nfa(tree)
+            dfa = build_dfa(nfa)
+            min_dfa = minimize_dfa(dfa)
+            self._min_dfa = min_dfa
+            
+            cfg = build_cfg(min_dfa)
+            strings = generate_strings(min_dfa, count=5)
+            desc = describe_language(min_dfa, nfa, strings, self._expression)
+            
+            self._populate_nfa_tab(nfa)
+            self._populate_dfa_tab(dfa)
+            self._populate_min_dfa_tab(min_dfa)
+            self._populate_props_tab(cfg, strings, desc)
+            self._reset_sim_tab()
+            
+            self._show_results_panel()
+            
         except PreprocessorError as err:
             self._flash_result(success=False)
             self._show_error(str(err))
+
+    def _show_results_panel(self) -> None:
+        self._calc_panel.hide()
+        self._results_expr_label.setText(f"REGEX: {self._expression}")
+        self._results_panel.show()
+            
+    def _hide_results_panel(self) -> None:
+        self._results_panel.hide()
+        self._calc_panel.show()
+
+    def _build_results_panel(self) -> None:
+        self._results_panel = QFrame()
+        self._results_panel.setObjectName("ResultsPanel")
+        self._results_panel.setStyleSheet("""
+            QFrame#ResultsPanel {
+                background-color: #FFFFFF;
+                border: 3px solid #111111;
+                border-radius: 0px;
+                margin-top: 10px;
+            }
+        """)
+        self._results_panel.hide()
+        self._results_panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        
+        results_layout = QVBoxLayout(self._results_panel)
+        results_layout.setContentsMargins(10, 10, 10, 10)
+        results_layout.setSpacing(8)
+        
+        header_layout = QHBoxLayout()
+        header_layout.setSpacing(8)
+        self._btn_return = QPushButton("← BACK")
+        self._btn_return.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_return.setFixedHeight(32)
+        self._btn_return.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+        self._btn_return.setStyleSheet("""
+            QPushButton {
+                background: #111111;
+                color: #FFE000;
+                border: 3px solid #111111;
+                padding: 4px 12px;
+                font-weight: 900;
+                font-family: 'Segoe UI';
+                font-size: 12px;
+                letter-spacing: 1px;
+            }
+            QPushButton:hover {
+                background: #FFE000;
+                color: #111111;
+            }
+        """)
+        self._btn_return.clicked.connect(self._hide_results_panel)
+        header_layout.addWidget(self._btn_return)
+        
+        self._results_expr_label = QLabel()
+        self._results_expr_label.setStyleSheet(
+            "color: #111111; font-family: 'Consolas'; font-size: 13px; font-weight: bold;"
+        )
+        self._results_expr_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self._results_expr_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self._results_expr_label.setMinimumWidth(0)
+        header_layout.addWidget(self._results_expr_label, 1)
+        
+        results_layout.addLayout(header_layout)
+        
+        self._results_tabs = QTabWidget()
+        self._results_tabs.setStyleSheet("""
+            QTabWidget::pane {
+                border: 3px solid #111111;
+                background: #FFFFFF;
+                top: -3px;
+            }
+            QTabBar::tab {
+                background: #F5F0E8;
+                color: #111111;
+                border: 3px solid #111111;
+                padding: 7px 14px;
+                font-weight: 900;
+                font-family: 'Segoe UI';
+                font-size: 12px;
+                margin-right: -3px;
+                letter-spacing: 0.5px;
+                min-width: 40px;
+            }
+            QTabBar::tab:selected {
+                background: #FFE000;
+                z-index: 10;
+            }
+            QTabBar::tab:hover:!selected {
+                background: #111111;
+                color: #FFE000;
+            }
+            QTabBar::scroller {
+                width: 28px;
+            }
+            QToolButton {
+                background: #F5F0E8;
+                border: 3px solid #111111;
+                color: #111111;
+                border-radius: 0px;
+                margin: 2px;
+            }
+            QToolButton:hover {
+                background: #111111;
+                color: #FFE000;
+            }
+        """)
+        
+        self._results_tabs.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        
+        self._tab_nfa = QWidget()
+        self._tab_dfa = QWidget()
+        self._tab_min_dfa = QWidget()
+        self._tab_props = QWidget()
+        self._tab_sim = QWidget()
+        
+        self._results_tabs.addTab(self._tab_nfa, "ε-NFA")
+        self._results_tabs.addTab(self._tab_dfa, "DFA")
+        self._results_tabs.addTab(self._tab_min_dfa, "Min DFA")
+        self._results_tabs.addTab(self._tab_props, "Properties")
+        self._results_tabs.addTab(self._tab_sim, "Simulator")
+        
+        results_layout.addWidget(self._results_tabs)
+        self.layout().addWidget(self._results_panel)
+        
+        self._build_automata_tab(self._tab_nfa)
+        self._build_automata_tab(self._tab_dfa)
+        self._build_automata_tab(self._tab_min_dfa)
+        self._build_props_tab()
+        self._build_sim_tab()
+
+    def _build_automata_tab(self, tab: QWidget) -> None:
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
+        
+        top_bar = QHBoxLayout()
+        top_bar.setContentsMargins(0, 0, 0, 0)
+        
+        toggle_btn = QPushButton("⇌ SHOW TRANSITION TABLE")
+        toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        toggle_btn.setFixedHeight(32)
+        toggle_btn.setStyleSheet("""
+            QPushButton {
+                background: #F5F0E8;
+                color: #111111;
+                border: 2px solid #111111;
+                font-weight: 900;
+                font-family: 'Segoe UI';
+                font-size: 11px;
+                padding: 4px 16px;
+                letter-spacing: 1px;
+            }
+            QPushButton:hover {
+                background: #111111;
+                color: #FFE000;
+            }
+        """)
+        top_bar.addStretch()
+        top_bar.addWidget(toggle_btn)
+        layout.addLayout(top_bar)
+        
+        stack = QStackedWidget()
+        
+        img_scroll = QScrollArea()
+        img_scroll.setWidgetResizable(True)
+        img_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        img_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        img_scroll.setStyleSheet("""
+            QScrollArea {
+                background: #FFFFFF;
+                border: 2px solid #111111;
+            }
+            QScrollBar:vertical, QScrollBar:horizontal {
+                background: #F5F0E8;
+                border: 1px solid #CCCCCC;
+                width: 10px;
+                height: 10px;
+            }
+            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+                background: #111111;
+                min-height: 20px;
+                min-width: 20px;
+            }
+            QScrollBar::add-line, QScrollBar::sub-line { height: 0; width: 0; }
+        """)
+        img_label = QLabel()
+        img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        img_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        img_scroll.setWidget(img_label)
+        stack.addWidget(img_scroll)
+        
+        table_container = QWidget()
+        table_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        table_vbox = QVBoxLayout(table_container)
+        table_vbox.setContentsMargins(0, 0, 0, 0)
+        table_vbox.setSpacing(0)
+
+        table_header = QLabel("TRANSITION TABLE")
+        table_header.setStyleSheet(
+            "color: #111111; font-size: 9px; font-weight: 900; letter-spacing: 2px;"
+            " background: #FFE000; border: 2px solid #111111; border-bottom: none;"
+            " padding: 4px 8px;"
+        )
+        table_vbox.addWidget(table_header)
+
+        table = QTableWidget()
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+
+        table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+
+        table.setStyleSheet("""
+            QTableWidget {
+                background: #FFFFFF;
+                color: #111111;
+                gridline-color: #CCCCCC;
+                font-family: 'Consolas';
+                font-size: 12px;
+                font-weight: bold;
+                border: 2px solid #111111;
+            }
+            QHeaderView::section {
+                background: #F5F0E8;
+                color: #111111;
+                font-weight: 900;
+                font-family: 'Segoe UI';
+                border: 1px solid #CCCCCC;
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+            QHeaderView::section:checked {
+                background: #FFE000;
+            }
+            QTableWidget::item {
+                padding: 4px 8px;
+            }
+            QTableWidget::item:selected {
+                background: #FFE000;
+                color: #111111;
+            }
+            QScrollBar:vertical, QScrollBar:horizontal {
+                background: #F5F0E8;
+                border: 1px solid #CCCCCC;
+                width: 10px;
+                height: 10px;
+                margin: 0;
+            }
+            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+                background: #111111;
+                min-height: 20px;
+                min-width: 20px;
+                border-radius: 0px;
+            }
+            QScrollBar::add-line, QScrollBar::sub-line { height: 0; width: 0; }
+            QScrollBar::add-page, QScrollBar::sub-page { background: none; }
+        """)
+        table.setShowGrid(True)
+        table.setAlternatingRowColors(True)
+
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        table.horizontalHeader().setStretchLastSection(False)
+        table.horizontalHeader().setMinimumSectionSize(48)
+        table.horizontalHeader().setDefaultSectionSize(72)
+
+        table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+        table.verticalHeader().setDefaultSectionSize(28)
+        table.verticalHeader().setMinimumSectionSize(28)
+
+        table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        table.setHorizontalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)
+        table.setVerticalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)
+
+        table_vbox.addWidget(table)
+        table_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        stack.addWidget(table_container)
+        
+        layout.addWidget(stack)
+        
+        def _toggle_view(checked=False, s=stack, btn=toggle_btn):
+            if s.currentIndex() == 0:
+                s.setCurrentIndex(1)
+                btn.setText("⇌ SHOW VISUAL DIAGRAM")
+            else:
+                s.setCurrentIndex(0)
+                btn.setText("⇌ SHOW TRANSITION TABLE")
+                
+        toggle_btn.clicked.connect(_toggle_view)
+        
+        tab.img_label = img_label
+        tab.table = table
+
+    def _build_props_tab(self) -> None:
+        outer_layout = QVBoxLayout(self._tab_props)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setStyleSheet("""
+            QScrollArea { border: none; background: #FFFFFF; }
+            QScrollBar:vertical {
+                background: #F5F0E8; border: 1px solid #CCCCCC; width: 10px;
+            }
+            QScrollBar::handle:vertical { background: #111111; min-height: 20px; }
+            QScrollBar::add-line, QScrollBar::sub-line { height: 0; }
+        """)
+
+        content = QWidget()
+        content.setStyleSheet("background: #FFFFFF;")
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(10)
+
+        def _section_label(text: str) -> QLabel:
+            lbl = QLabel(text)
+            lbl.setStyleSheet(
+                "color: #111111; font-weight: 900; font-size: 10px; font-family: 'Segoe UI';"
+                " letter-spacing: 2px; background: #FFE000; border: 2px solid #111111;"
+                " border-bottom: none; padding: 4px 8px;"
+            )
+            return lbl
+
+        layout.addWidget(_section_label("CONTEXT-FREE GRAMMAR"))
+        self._cfg_label = QLabel()
+        self._cfg_label.setFont(QFont("Consolas", 11, QFont.Weight.Bold))
+        self._cfg_label.setStyleSheet(
+            "color: #111111; background: #F5F0E8; border: 2px solid #111111; padding: 10px;"
+        )
+        self._cfg_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        self._cfg_label.setTextFormat(Qt.TextFormat.PlainText)
+        self._cfg_label.setWordWrap(True)
+        layout.addWidget(self._cfg_label)
+
+        layout.addWidget(_section_label("GENERATED STRINGS"))
+        self._strings_label = QLabel()
+        self._strings_label.setFont(QFont("Consolas", 12, QFont.Weight.Bold))
+        self._strings_label.setStyleSheet(
+            "color: #111111; background: #FFE000; border: 2px solid #111111; padding: 10px;"
+        )
+        self._strings_label.setWordWrap(True)
+        layout.addWidget(self._strings_label)
+
+        layout.addWidget(_section_label("ENGLISH DESCRIPTION"))
+        self._desc_label = QLabel()
+        self._desc_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        self._desc_label.setStyleSheet(
+            "color: #111111; background: #F5F0E8; border: 2px solid #111111; padding: 10px;"
+        )
+        self._desc_label.setWordWrap(True)
+        layout.addWidget(self._desc_label)
+
+        layout.addStretch()
+        scroll.setWidget(content)
+        outer_layout.addWidget(scroll)
+
+    def _build_sim_tab(self) -> None:
+        layout = QVBoxLayout(self._tab_sim)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
+        
+        controls_layout = QHBoxLayout()
+        controls_layout.setSpacing(6)
+        self._sim_input = QLineEdit()
+        self._sim_input.setPlaceholderText("Enter test string…")
+        self._sim_input.setStyleSheet("""
+            QLineEdit {
+                background: #FFFFFF;
+                color: #111111;
+                border: 2px solid #111111;
+                padding: 6px 10px;
+                font-family: 'Consolas';
+                font-weight: bold;
+                font-size: 13px;
+            }
+        """)
+        self._sim_input.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        
+        sim_btn_style = """
+            QPushButton {
+                background: #FFE000;
+                border: 2px solid #111111;
+                border-radius: 0px;
+                color: #111111;
+                font-size: 12px;
+                font-weight: 900;
+                font-family: 'Segoe UI';
+                padding: 6px 12px;
+                letter-spacing: 1px;
+                white-space: nowrap;
+            }
+            QPushButton:hover {
+                background: #111111;
+                color: #FFE000;
+            }
+            QPushButton:pressed {
+                background: #333333;
+                color: #FFE000;
+            }
+            QPushButton:disabled {
+                background: #E0E0E0;
+                color: #888888;
+                border: 2px solid #888888;
+            }
+        """
+        
+        self._btn_test = QPushButton("TEST")
+        self._btn_test.setStyleSheet(sim_btn_style)
+        self._btn_test.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_test.setFixedHeight(34)
+        self._btn_test.clicked.connect(self._start_sim)
+        
+        self._btn_step = QPushButton("STEP")
+        self._btn_step.setStyleSheet(sim_btn_style)
+        self._btn_step.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_step.setFixedHeight(34)
+        self._btn_step.clicked.connect(self._sim_step)
+        self._btn_step.setEnabled(False)
+        
+        self._btn_play = QPushButton("▶ / ‖")
+        self._btn_play.setStyleSheet(sim_btn_style)
+        self._btn_play.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_play.setFixedHeight(34)
+        self._btn_play.clicked.connect(self._toggle_play)
+        self._btn_play.setEnabled(False)
+        
+        controls_layout.addWidget(self._sim_input, 1)
+        controls_layout.addWidget(self._btn_test)
+        controls_layout.addWidget(self._btn_step)
+        controls_layout.addWidget(self._btn_play)
+        layout.addLayout(controls_layout)
+        
+        self._sim_status = QLabel("Ready")
+        self._sim_status.setStyleSheet(
+            "color: #111111; background: #F5F0E8; border: 2px solid #111111;"
+            " padding: 6px 10px; font-size: 12px; font-weight: 900; font-family: 'Segoe UI';"
+        )
+        self._sim_status.setFixedHeight(34)
+        layout.addWidget(self._sim_status)
+        
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setStyleSheet("""
+            QScrollArea { background: #FFFFFF; border: 2px solid #111111; }
+            QScrollBar:vertical, QScrollBar:horizontal {
+                background: #F5F0E8; border: 1px solid #CCCCCC;
+                width: 10px; height: 10px;
+            }
+            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+                background: #111111; min-height: 20px; min-width: 20px;
+            }
+            QScrollBar::add-line, QScrollBar::sub-line { height: 0; width: 0; }
+        """)
+        self._sim_img_label = QLabel()
+        self._sim_img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._sim_img_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        scroll.setWidget(self._sim_img_label)
+        layout.addWidget(scroll, 1)
+
+    def _populate_nfa_tab(self, nfa) -> None:
+        img_path = os.path.join(self._temp_dir, "nfa")
+        try:
+            path = nfa.render_graphviz(img_path)
+            self._tab_nfa.img_label.setPixmap(QPixmap(path))
+        except ExecutableNotFound:
+            self._tab_nfa.img_label.setText("Graphviz not found. Please install Graphviz to view visual models.")
+            self._tab_nfa.img_label.setStyleSheet("color: #FF2020; font-size: 14px; font-weight: bold;")
+        
+        table_data = nfa.transition_table()
+        symbols = sorted(nfa.alphabet) + ["ε"]
+        self._setup_table(self._tab_nfa.table, [str(r["state"]) for r in table_data], symbols)
+        
+        for r_idx, row in enumerate(table_data):
+            for c_idx, sym in enumerate(symbols):
+                nexts = row.get(sym, [])
+                if nexts:
+                    val = ", ".join(map(str, nexts))
+                else:
+                    val = ""
+                item = QTableWidgetItem(val)
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self._tab_nfa.table.setItem(r_idx, c_idx, item)
+        self._tab_nfa.table.resizeColumnsToContents()
+
+    def _populate_dfa_tab(self, dfa) -> None:
+        img_path = os.path.join(self._temp_dir, "dfa")
+        try:
+            path = dfa.render_graphviz(img_path)
+            self._tab_dfa.img_label.setPixmap(QPixmap(path))
+        except ExecutableNotFound:
+            self._tab_dfa.img_label.setText("Graphviz not found.")
+            self._tab_dfa.img_label.setStyleSheet("color: #FF2020;")
+        
+        table_data = dfa.transition_table()
+        symbols = sorted(dfa.alphabet)
+        self._setup_table(self._tab_dfa.table, [r["state"] for r in table_data], symbols)
+        
+        for r_idx, row in enumerate(table_data):
+            for c_idx, sym in enumerate(symbols):
+                val = row.get(sym, "")
+                if val:
+                    item = QTableWidgetItem(str(val))
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self._tab_dfa.table.setItem(r_idx, c_idx, item)
+        self._tab_dfa.table.resizeColumnsToContents()
+
+    def _populate_min_dfa_tab(self, min_dfa) -> None:
+        img_path = os.path.join(self._temp_dir, "min_dfa")
+        try:
+            path = min_dfa.render_graphviz(img_path)
+            self._tab_min_dfa.img_label.setPixmap(QPixmap(path))
+        except ExecutableNotFound:
+            self._tab_min_dfa.img_label.setText("Graphviz not found.")
+            self._tab_min_dfa.img_label.setStyleSheet("color: #FF2020;")
+        
+        table_data = min_dfa.transition_table()
+        symbols = sorted(min_dfa.alphabet)
+        self._setup_table(self._tab_min_dfa.table, [r["state"] for r in table_data], symbols)
+        
+        for r_idx, row in enumerate(table_data):
+            for c_idx, sym in enumerate(symbols):
+                val = row.get(sym, "")
+                if val:
+                    item = QTableWidgetItem(str(val))
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self._tab_min_dfa.table.setItem(r_idx, c_idx, item)
+        self._tab_min_dfa.table.resizeColumnsToContents()
+
+    def _setup_table(self, table: QTableWidget, row_labels: list, col_labels: list) -> None:
+        table.clear()
+        table.setRowCount(len(row_labels))
+        table.setColumnCount(len(col_labels))
+        table.setHorizontalHeaderLabels(col_labels)
+        table.setVerticalHeaderLabels(row_labels)
+
+    def _populate_props_tab(self, cfg, strings, desc) -> None:
+        self._cfg_label.setText(cfg.rules_text() or "No rules generated.")
+        self._strings_label.setText(", ".join(strings) if strings else "None")
+        self._desc_label.setText(desc)
+
+    def _reset_sim_tab(self) -> None:
+        self._sim_input.clear()
+        self._sim_status.setText("Ready")
+        self._sim_status.setStyleSheet(
+            "color: #111111; background: #F5F0E8; border: 2px solid #111111;"
+            " padding: 6px 10px; font-size: 12px; font-weight: 900; font-family: 'Segoe UI';"
+        )
+        self._btn_step.setEnabled(False)
+        self._btn_play.setEnabled(False)
+        self._sim_timer.stop()
+        self._sim_steps = []
+        if self._min_dfa:
+            img_path = os.path.join(self._temp_dir, "sim_dfa")
+            try:
+                path = self._min_dfa.render_graphviz(img_path)
+                self._sim_img_label.setPixmap(QPixmap(path))
+            except ExecutableNotFound:
+                self._sim_img_label.setText("Graphviz not found.")
+                self._sim_img_label.setStyleSheet("color: #FF2020;")
+
+    def _start_sim(self) -> None:
+        if not self._min_dfa:
+            return
+        
+        self._sim_timer.stop()
+        string = self._sim_input.text()
+        self._sim_steps = self._min_dfa.step_trace(string)
+        self._sim_current_step = 0
+        self._sim_status.setText(f"Simulating: '{string}'")
+        self._btn_step.setEnabled(True)
+        self._btn_play.setEnabled(True)
+        
+        img_path = os.path.join(self._temp_dir, f"sim_step_init")
+        try:
+            path = self._min_dfa.render_graphviz(img_path, highlight_state=self._min_dfa.label(self._min_dfa.start))
+            self._sim_img_label.setPixmap(QPixmap(path))
+        except ExecutableNotFound:
+            self._sim_img_label.setText("Graphviz not found.")
+            self._sim_img_label.setStyleSheet("color: #FF2020;")
+
+    def _toggle_play(self) -> None:
+        if self._sim_timer.isActive():
+            self._sim_timer.stop()
+            self._sim_status.setText("Paused")
+        else:
+            if self._sim_current_step >= len(self._sim_steps):
+                self._start_sim()
+            self._sim_timer.start(1000) 
+            self._sim_status.setText("Playing...")
+
+    def _sim_step(self) -> None:
+        if self._sim_current_step >= len(self._sim_steps):
+            self._btn_step.setEnabled(False)
+            self._btn_play.setEnabled(False)
+            self._sim_timer.stop()
+            if self._sim_steps and self._sim_steps[-1]["accepted"]:
+                self._sim_status.setText("Result: ACCEPTED ✓")
+                self._sim_status.setStyleSheet("color: #111111; background: #00E5CC; border: 2px solid #111111; padding: 6px 10px; font-size: 12px; font-weight: 900; font-family: 'Segoe UI';")
+            else:
+                self._sim_status.setText("Result: REJECTED ✗")
+                self._sim_status.setStyleSheet("color: #FFFFFF; background: #FF2020; border: 2px solid #111111; padding: 6px 10px; font-size: 12px; font-weight: 900; font-family: 'Segoe UI';")
+            return
+            
+        step = self._sim_steps[self._sim_current_step]
+        frm = step["from_state"]
+        to = step["to_state"]
+        sym = step["char"]
+        
+        img_path = os.path.join(self._temp_dir, f"sim_step_{self._sim_current_step}")
+        try:
+            if step["dead"]:
+                self._sim_status.setText(f"Step {self._sim_current_step + 1}: Dead state on '{sym}'")
+                self._sim_status.setStyleSheet("color: #FFFFFF; background: #FF2020; border: 2px solid #111111; padding: 6px 10px; font-size: 12px; font-weight: 900; font-family: 'Segoe UI';")
+                path = self._min_dfa.render_graphviz(img_path, highlight_state=frm)
+                self._btn_step.setEnabled(False)
+            else:
+                self._sim_status.setText(f"Step {self._sim_current_step + 1}: '{frm}' → '{sym}' → '{to}'")
+                self._sim_status.setStyleSheet("color: #111111; background: #FFE000; border: 2px solid #111111; padding: 6px 10px; font-size: 12px; font-weight: 900; font-family: 'Segoe UI';")
+                path = self._min_dfa.render_graphviz(img_path, highlight_state=to, highlight_edge=(frm, to, sym))
+                
+            self._sim_img_label.setPixmap(QPixmap(path))
+        except ExecutableNotFound:
+            pass 
+            
+        self._sim_current_step += 1
 
     @staticmethod
     def _delete_last_token(expr: str) -> str:
@@ -446,6 +1115,11 @@ class RegexMatrixPage(BasePage):
     def _show_calc_panel(self) -> None:
         if self._panel_shown:
             return
+            
+        if hasattr(self, '_results_panel') and self._results_panel.isVisible():
+            self._panel_shown = True
+            return
+            
         self._panel_shown = True
         self._calc_panel.setMaximumHeight(0)
         self._calc_panel.show()
