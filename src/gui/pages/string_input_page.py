@@ -25,7 +25,7 @@ try:
 except ImportError:
     ExecutableNotFound = Exception
 
-# ─── shared styles ────────────────────────────────────────────────────────────
+                                                                                
 _PANEL_SS = """
 QFrame#CalcPanel {
     background-color: #FFFFFF;
@@ -118,7 +118,7 @@ class StringInputPage(BasePage):
         layout.setContentsMargins(24, 18, 24, 18)
         layout.setSpacing(14)
 
-        # ── header display ────────────────────────────────────────────
+                                                                        
         disp = QFrame()
         disp.setObjectName("DisplayFrame")
         disp.setStyleSheet("""
@@ -155,14 +155,14 @@ class StringInputPage(BasePage):
         
         layout.addWidget(disp)
 
-        # ── error label ───────────────────────────────────────────────
+                                                                        
         self._error_lbl = QLabel("")
         self._error_lbl.setStyleSheet("color: #FF2020; font-size: 10px; font-weight: 700;"
                                       " background: transparent; border: none;")
         self._error_lbl.setVisible(False)
         layout.addWidget(self._error_lbl)
 
-        # ── string input ──────────────────────────────────────────────
+                                                                        
         vlay = QVBoxLayout()
         vlay.setSpacing(6)
 
@@ -182,7 +182,7 @@ class StringInputPage(BasePage):
         
         layout.addStretch()
 
-        # ── submit ────────────────────────────────────────────────────
+                                                                        
         submit_btn = QPushButton("ANALYSE STRINGS  ▶")
         submit_btn.setFixedHeight(40)
         submit_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -208,19 +208,19 @@ class StringInputPage(BasePage):
             except Exception as e:
                 self._show_error(f"Failed to read file: {e}")
 
-    # ════════════════════════════════════════════════════════════════════════
-    #   EVALUATE
-    # ════════════════════════════════════════════════════════════════════════
+                                                                              
+                
+                                                                              
     def _evaluate(self) -> None:
         raw = self._strings_input.toPlainText()
-        # Parse by newlines or commas
+                                     
         import re
         tokens = [s.strip() for s in re.split(r'[\n,]+', raw) if s.strip()]
         if not tokens:
             self._show_error("Please enter at least one string.")
             return
 
-        # Replace epsilon representations with empty string for parsing
+                                                                       
         clean_strings = []
         for t in tokens:
             if t.lower() in ['ε', 'epsilon', 'lambda']:
@@ -240,7 +240,7 @@ class StringInputPage(BasePage):
             min_dfa = dfa
         self._min_dfa = min_dfa
 
-        # Extract state elimination mapping
+                                           
         state_names = [min_dfa.label(s) for s in min_dfa.states]
         start_lbl = min_dfa.label(min_dfa.start)
         accept_lbls = {min_dfa.label(s) for s in min_dfa.accept_states}
@@ -255,10 +255,10 @@ class StringInputPage(BasePage):
 
         cfg = build_cfg(min_dfa)
         strings = generate_strings(min_dfa, count=5)
-        # Note: NFA is not explicitly generated here, pass None to describer
-        desc = describe_language(min_dfa, None, strings, regex_str)  # type: ignore
+                                                                            
+        desc = describe_language(min_dfa, None, strings, regex_str)                
 
-        # 5. Populate
+                     
         self._populate_regex_tab(regex_str)
         self._populate_dfa_tab(dfa)
         self._populate_min_dfa_tab(min_dfa)
@@ -311,9 +311,9 @@ class StringInputPage(BasePage):
         grow.start()
         self._grow_anim = grow
 
-    # ════════════════════════════════════════════════════════════════════════
-    #   RESULTS PANEL
-    # ════════════════════════════════════════════════════════════════════════
+                                                                              
+                     
+                                                                              
     def _build_results_panel(self) -> None:
         self._results_panel = QFrame()
         self._results_panel.setObjectName("ResultsPanel")
@@ -326,7 +326,7 @@ class StringInputPage(BasePage):
         rl.setContentsMargins(10, 10, 10, 10)
         rl.setSpacing(8)
 
-        # header
+                
         hdr = QHBoxLayout()
         self._btn_return = QPushButton("← BACK")
         self._btn_return.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -346,7 +346,7 @@ class StringInputPage(BasePage):
         hdr.addWidget(self._results_expr_label, 1)
         rl.addLayout(hdr)
 
-        # tabs
+              
         self._results_tabs = QTabWidget()
         self._results_tabs.setStyleSheet(_TAB_SS)
         self._results_tabs.setSizePolicy(
@@ -381,7 +381,7 @@ class StringInputPage(BasePage):
         self._results_panel.hide()
         self._input_panel.show()
 
-    # ── regex tab ─────────────────────────────────────────────────────────
+                                                                            
     def _build_regex_tab(self) -> None:
         lay = QVBoxLayout(self._tab_regex)
         lay.setContentsMargins(16, 16, 16, 16)
@@ -414,7 +414,7 @@ class StringInputPage(BasePage):
     def _populate_regex_tab(self, regex_str: str) -> None:
         self._regex_result_lbl.setText(regex_str if regex_str else "∅")
 
-    # ── automata tab (reused for DFA and Min DFA) ─────────────────────────
+                                                                            
     def _build_automata_tab(self, tab: QWidget) -> None:
         lay = QVBoxLayout(tab)
         lay.setContentsMargins(8, 8, 8, 8)
@@ -534,7 +534,7 @@ class StringInputPage(BasePage):
         table.setHorizontalHeaderLabels(col_labels)
         table.setVerticalHeaderLabels(row_labels)
 
-    # ── props tab ─────────────────────────────────────────────────────────
+                                                                            
     def _build_props_tab(self) -> None:
         outer = QVBoxLayout(self._tab_props)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -586,7 +586,7 @@ class StringInputPage(BasePage):
         self._strings_label.setText(", ".join(strings) if strings else "None")
         self._desc_label.setText(desc)
 
-    # ── simulator tab ─────────────────────────────────────────────────────
+                                                                            
     def _build_sim_tab(self) -> None:
         lay = QVBoxLayout(self._tab_sim)
         lay.setContentsMargins(8, 8, 8, 8)

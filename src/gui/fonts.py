@@ -41,18 +41,18 @@ def load_material_icons() -> bool:
 
     fid = QFontDatabase.addApplicationFont(str(font_path))
     if fid == -1:
-        # print("[fonts] ERR QFontDatabase rejected the TTF.")
+                                                              
         return False
 
     families = QFontDatabase.applicationFontFamilies(fid)
-    # print(f"[fonts] Registered families: {families}")
+                                                       
     if families:
         _fam_name = families[0]   
         _loaded   = True
-        # print(f"[fonts] OK  Material Icons active as '{_fam_name}'.")
+                                                                       
         return True
 
-    # print("[fonts] ERR No families registered -- icons will be blank.")
+                                                                         
     return False
 
 def icon_font(size: int = 20) -> QFont:

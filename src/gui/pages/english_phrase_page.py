@@ -28,7 +28,7 @@ try:
 except ImportError:
     ExecutableNotFound = Exception
 
-# ─── shared styles ────────────────────────────────────────────────────────────
+                                                                                
 _PANEL_SS = """
 QFrame#CalcPanel {
     background-color: #FFFFFF;
@@ -121,7 +121,7 @@ class EnglishPhrasePage(BasePage):
         layout.setContentsMargins(24, 18, 24, 18)
         layout.setSpacing(14)
 
-        # ── header display ────────────────────────────────────────────
+                                                                        
         disp = QFrame()
         disp.setObjectName("DisplayFrame")
         disp.setStyleSheet("""
@@ -147,14 +147,14 @@ class EnglishPhrasePage(BasePage):
         disp_lay.addLayout(col, 1)
         layout.addWidget(disp)
 
-        # ── error label ───────────────────────────────────────────────
+                                                                        
         self._error_lbl = QLabel("")
         self._error_lbl.setStyleSheet("color: #FF2020; font-size: 10px; font-weight: 700;"
                                       " background: transparent; border: none;")
         self._error_lbl.setVisible(False)
         layout.addWidget(self._error_lbl)
 
-        # ── phrase input ──────────────────────────────────────────────
+                                                                        
         grid_lay = QGridLayout()
         grid_lay.setSpacing(14)
         grid_lay.setColumnStretch(1, 1)
@@ -178,7 +178,7 @@ class EnglishPhrasePage(BasePage):
             "QLineEdit { background:#FFFFFF; border:2px solid #111111; padding:12px;"
             " font-family:'Segoe UI'; font-weight:700; font-size:16px; }"
         )
-        # Handle Enter key to analyse
+                                     
         self._phrase_input.returnPressed.connect(self._evaluate)
         grid_lay.addWidget(self._phrase_input, 1, 1)
 
@@ -190,7 +190,7 @@ class EnglishPhrasePage(BasePage):
 
         layout.addStretch()
 
-        # ── submit ────────────────────────────────────────────────────
+                                                                        
         submit_btn = QPushButton("ANALYSE PHRASE  ▶")
         submit_btn.setFixedHeight(40)
         submit_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -206,9 +206,9 @@ class EnglishPhrasePage(BasePage):
 
         self.layout().addWidget(self._input_panel)
 
-    # ════════════════════════════════════════════════════════════════════════
-    #   EVALUATE
-    # ════════════════════════════════════════════════════════════════════════
+                                                                              
+                
+                                                                              
     def _evaluate(self) -> None:
         phrase = self._phrase_input.text().strip()
         if not phrase:
@@ -220,14 +220,14 @@ class EnglishPhrasePage(BasePage):
         if not alphabet:
             alphabet = ["a", "b"]
 
-        # 1. English to Regex
+                             
         try:
             regex_str = parse_english_to_regex(phrase, alphabet)
         except Exception as e:
             self._show_error(str(e))
             return
 
-        # 2. Regex to DFA Pipeline
+                                  
         try:
             expanded = expand(regex_str)
             tokens = tokenize(expanded)
@@ -238,20 +238,20 @@ class EnglishPhrasePage(BasePage):
             self._show_error(f"Translation logic error: {e}")
             return
 
-        # 3. Minimize
+                     
         try:
             min_dfa = minimize_dfa(dfa)
         except Exception:
             min_dfa = dfa
         self._min_dfa = min_dfa
 
-        # 4. Downstream properties
+                                  
         cfg = build_cfg(min_dfa)
         strings = generate_strings(min_dfa, count=5)
-        # Describe back using the standard module to verify
+                                                           
         desc = describe_language(min_dfa, nfa, strings, regex_str)  
 
-        # 5. Populate
+                     
         self._populate_regex_tab(regex_str)
         self._populate_dfa_tab(dfa)
         self._populate_min_dfa_tab(min_dfa)
@@ -304,9 +304,9 @@ class EnglishPhrasePage(BasePage):
         grow.start()
         self._grow_anim = grow
 
-    # ════════════════════════════════════════════════════════════════════════
-    #   RESULTS PANEL
-    # ════════════════════════════════════════════════════════════════════════
+                                                                              
+                     
+                                                                              
     def _build_results_panel(self) -> None:
         self._results_panel = QFrame()
         self._results_panel.setObjectName("ResultsPanel")
@@ -319,7 +319,7 @@ class EnglishPhrasePage(BasePage):
         rl.setContentsMargins(10, 10, 10, 10)
         rl.setSpacing(8)
 
-        # header
+                
         hdr = QHBoxLayout()
         self._btn_return = QPushButton("← BACK")
         self._btn_return.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -339,7 +339,7 @@ class EnglishPhrasePage(BasePage):
         hdr.addWidget(self._results_expr_label, 1)
         rl.addLayout(hdr)
 
-        # tabs
+              
         self._results_tabs = QTabWidget()
         self._results_tabs.setStyleSheet(_TAB_SS)
         self._results_tabs.setSizePolicy(
@@ -374,7 +374,7 @@ class EnglishPhrasePage(BasePage):
         self._results_panel.hide()
         self._input_panel.show()
 
-    # ── regex tab ─────────────────────────────────────────────────────────
+                                                                            
     def _build_regex_tab(self) -> None:
         lay = QVBoxLayout(self._tab_regex)
         lay.setContentsMargins(16, 16, 16, 16)
@@ -407,7 +407,7 @@ class EnglishPhrasePage(BasePage):
     def _populate_regex_tab(self, regex_str: str) -> None:
         self._regex_result_lbl.setText(regex_str if regex_str else "∅")
 
-    # ── automata tab (reused for DFA and Min DFA) ─────────────────────────
+                                                                            
     def _build_automata_tab(self, tab: QWidget) -> None:
         lay = QVBoxLayout(tab)
         lay.setContentsMargins(8, 8, 8, 8)
@@ -527,7 +527,7 @@ class EnglishPhrasePage(BasePage):
         table.setHorizontalHeaderLabels(col_labels)
         table.setVerticalHeaderLabels(row_labels)
 
-    # ── props tab ─────────────────────────────────────────────────────────
+                                                                            
     def _build_props_tab(self) -> None:
         outer = QVBoxLayout(self._tab_props)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -579,7 +579,7 @@ class EnglishPhrasePage(BasePage):
         self._strings_label.setText(", ".join(strings) if strings else "None")
         self._desc_label.setText(desc)
 
-    # ── simulator tab ─────────────────────────────────────────────────────
+                                                                            
     def _build_sim_tab(self) -> None:
         lay = QVBoxLayout(self._tab_sim)
         lay.setContentsMargins(8, 8, 8, 8)

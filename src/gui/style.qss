@@ -1,24 +1,12 @@
-/* ================================================================
-   GRAMATRIX — BRUTALIST THEME 
-   Philosophy: Raw structure. No glass. No gradients. No mercy.
-   Palette:
-     Background:  #F0EBE0  (raw concrete paper)
-     Surface:     #FFFFFF  #111111  #0A0A0A
-     Accent:      #FFE000  (brutal yellow)
-     Hot:         #FF3C3C  (danger red)
-     Cold:        #00E5CC  (terminal cyan)
-     Muted:       #7C7C7C  (concrete grey)
-     Border:      #111111  (thick, black)
-     Text:        #111111  #FFFFFF  #AAAAAA
-   ================================================================ */
 
-/* ── Base ───────────────────────────────────────────────────────── */
+
+
 QWidget {
     color: #111111;
     font-family: "Segoe UI";
 }
 
-/* ── Root / Window ───────────────────────────────────────────────── */
+
 QMainWindow {
     background-color: #F0EBE0;
 }
@@ -27,14 +15,14 @@ QWidget#RootBackground {
     background-color: #F0EBE0;
 }
 
-/* ── Brutal Panel ────────────────────────────────────────────────── */
+
 QFrame#GlassPanel {
     background-color: #FAFAFA;
     border: 3px solid #111111;
     border-radius: 0px;
 }
 
-/* ── Sidebar ─────────────────────────────────────────────────────── */
+
 QFrame#Sidebar {
     background-color: #0A0A0A;
     border: none;
@@ -42,7 +30,7 @@ QFrame#Sidebar {
     border-radius: 0px;
 }
 
-/* ── Logo ────────────────────────────────────────────────────────── */
+
 QLabel#LogoIcon {
     font-family: "Material Icons";
     color: #FFE000;
@@ -68,7 +56,7 @@ QLabel#ExitIcon {
     background: transparent;
 }
 
-/* ── Divider ─────────────────────────────────────────────────────── */
+
 QFrame#Divider {
     background-color: #2A2A2A;
     max-height: 2px;
@@ -77,7 +65,7 @@ QFrame#Divider {
     margin: 3px 0px;
 }
 
-/* ── Section Labels ──────────────────────────────────────────────── */
+
 QLabel#SectionLabel {
     color: #00E5CC;
     font-size: 8px;
@@ -87,7 +75,7 @@ QLabel#SectionLabel {
     background: transparent;
 }
 
-/* ── Sidebar Toggle (chevron strip) ──────────────────────────────── */
+
 QWidget#ToggleWrap { background: transparent; }
 
 QPushButton#SidebarToggle {
@@ -110,7 +98,7 @@ QPushButton#SidebarToggle:pressed {
     color: #111111;
 }
 
-/* ── Global: kill focus rectangles on all buttons ────────────────── */
+
 QPushButton:focus {
     outline: none;
 }
@@ -122,7 +110,7 @@ QPushButton#BackButton:focus {
     border-style: solid;   
 }
 
-/* ── Nav Buttons ─────────────────────────────────────────────────── */
+
 QPushButton#NavButton {
     border: 2px solid transparent;
     border-radius: 0px;
@@ -132,7 +120,7 @@ QPushButton#NavButton {
     text-align: left;
 }
 
-/* HOVER → brutal highlight */
+
 QPushButton#NavButton:hover {
     background-color: #1C1C1C;
     border: 2px solid #FFE000;
@@ -145,13 +133,13 @@ QPushButton#NavButton:checked {
     color: #FFE000;
 }
 
-/* PRESSED */
+
 QPushButton#NavButton:pressed {
     background-color: #FFD000;
     color: #111111;
 }
 
-/* ── Nav Button Child Labels ─────────────────────────────────────── */
+
 QPushButton#NavButton QLabel {
     background: transparent;
     color: #E0E0E0;
@@ -163,7 +151,7 @@ QPushButton#NavButton:checked QLabel {
     color: #FFE000;
 }
 
-/* ── Exit Button ─────────────────────────────────────────────────── */
+
 QPushButton#ExitButton {
     border: 2px solid #FF3C3C;
     border-radius: 0px;
@@ -189,14 +177,14 @@ QPushButton#ExitButton:pressed {
     color: #FFFFFF;
 }
 
-/* ── Page Card ───────────────────────────────────────────────────── */
+
 QFrame#PageCard {
     background-color: #F0EBE0;
     border: 3px solid #111111;
     border-radius: 0px;
 }
 
-/* ── Page Icon ───────────────────────────────────────────────────── */
+
 QLabel#PageIcon {
     font-family: "Material Icons";
     font-size: 58px;
@@ -204,7 +192,7 @@ QLabel#PageIcon {
     padding: 8px;
 }
 
-/* ── Page Title ──────────────────────────────────────────────────── */
+
 QLabel#PageTitle {
     color: #111111;
     font-size: 32px;
@@ -213,7 +201,7 @@ QLabel#PageTitle {
     font-family: "Segoe UI";
 }
 
-/* ── Typing Label ────────────────────────────────────────────────── */
+
 QLabel#TypingLabel {
     color: #00E5CC;
     font-size: 11px;
@@ -222,7 +210,7 @@ QLabel#TypingLabel {
     font-weight: 700;
 }
 
-/* ── Back Button ─────────────────────────────────────────────────── */
+
 QPushButton#BackButton {
     background-color: #FFE000;
     border: 3px solid #111111;
@@ -243,7 +231,7 @@ QPushButton#BackButton:pressed {
     color: #FFE000;
 }
 
-/* ── Scrollbar ───────────────────────────────────────────────────── */
+
 QScrollBar:vertical {
     background: #1A1A1A;
     width: 6px;
@@ -262,7 +250,7 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     background: #1A1A1A;
 }
 
-/* ── Status tags / accent chips ─────────────────────────────────── */
+
 QLabel#TagCyan {
     background-color: #00E5CC;
     color: #0A0A0A;

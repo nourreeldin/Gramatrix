@@ -29,7 +29,7 @@ def _sigma_minus_star(alphabet: List[str], exclude: str) -> str:
 
 def parse_english_to_regex(phrase: str, alphabet: List[str]) -> str:
     phrase = phrase.lower().strip()
-    # normalize spaces
+                      
     phrase = re.sub(r'\s+', ' ', phrase)
     
     if not alphabet:
@@ -37,22 +37,22 @@ def parse_english_to_regex(phrase: str, alphabet: List[str]) -> str:
         
     sig_star = _sigma_star(alphabet)
     
-    # 1. Starts with X and ends with Y
+                                      
     m = re.match(r'^starts with\s+([a-z0-9]+)\s+and ends with\s+([a-z0-9]+)$', phrase)
     if m:
         return f"{m.group(1)}{sig_star}{m.group(2)}"
         
-    # 2. Starts with X
+                      
     m = re.match(r'^starts with\s+([a-z0-9]+)$', phrase)
     if m:
         return f"{m.group(1)}{sig_star}"
         
-    # 3. Ends with X
+                    
     m = re.match(r'^ends with\s+([a-z0-9]+)$', phrase)
     if m:
         return f"{sig_star}{m.group(1)}"
         
-    # 4. Contains exactly N X
+                             
     m = re.match(r'^contains exactly (\d+) ([a-z0-9])(?:[\'s]*)?$', phrase)
     if m:
         n = int(m.group(1))
@@ -66,7 +66,7 @@ def parse_english_to_regex(phrase: str, alphabet: List[str]) -> str:
             parts.append(other_star)
         return "".join(parts)
         
-    # 5. Contains at least N X
+                              
     m = re.match(r'^contains at least (\d+) ([a-z0-9])(?:[\'s]*)?$', phrase)
     if m:
         n = int(m.group(1))
@@ -79,12 +79,12 @@ def parse_english_to_regex(phrase: str, alphabet: List[str]) -> str:
             parts.append(sig_star)
         return "".join(parts)
 
-    # 6. Contains X
+                   
     m = re.match(r'^contains\s+([a-z0-9]+)$', phrase)
     if m:
         return f"{sig_star}{m.group(1)}{sig_star}"
         
-    # 7. Does not contain X
+                           
     m = re.match(r'^does not contain\s+([a-z0-9]+)$', phrase)
     if m:
         char = m.group(1)
@@ -95,11 +95,11 @@ def parse_english_to_regex(phrase: str, alphabet: List[str]) -> str:
         else:
             raise EnglishParseError("Multi-character 'does not contain' is too complex for basic parser.")
 
-    # 8. Empty string
+                     
     if phrase in ["empty", "empty string", "epsilon", "ε"]:
         return "ε"
         
-    # 9. All strings
+                    
     if phrase in ["all strings", "everything", "any string"]:
         return sig_star
         

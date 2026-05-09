@@ -45,8 +45,8 @@ def parse_right_linear_cfg(cfg_text: str) -> NFA:
 
     frag = NFAFragment(start=nt_to_state[first_nt], accept=accept_state)
     
-    # We may have non-terminals on the right side that are not defined on the left side
-    # We must allocate states for them too.
+                                                                                       
+                                           
     for nt, prods in rules.items():
         src = nt_to_state[nt]
         for prod_raw in prods:
@@ -54,7 +54,7 @@ def parse_right_linear_cfg(cfg_text: str) -> NFA:
             if prod == "ε":
                 frag.add(src, "ε", accept_state)
             elif len(prod) == 1:
-                # Terminal or Non-terminal
+                                          
                 if prod.isupper():
                     if prod not in nt_to_state:
                         nt_to_state[prod] = _new_state()
@@ -63,7 +63,7 @@ def parse_right_linear_cfg(cfg_text: str) -> NFA:
                     alphabet.add(prod)
                     frag.add(src, prod, accept_state)
             elif len(prod) == 2:
-                # aB
+                    
                 t, n = prod[0], prod[1]
                 if t.isupper() or not n.isupper():
                     raise CFGParseError(f"Right-linear rules must be form 'aB'. Found: '{prod}'")

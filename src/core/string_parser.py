@@ -10,14 +10,14 @@ def build_dfa_from_strings(strings: List[str]) -> DFA:
         for c in s:
             alphabet.add(c)
     
-    # states will be integers
-    # start state is 0
+                             
+                      
     transitions = {}
     accept_states = set()
     
     state_counter = 0
     
-    # We will build a Trie
+                          
     trie = {0: {}}
     
     for s in strings:
@@ -34,7 +34,7 @@ def build_dfa_from_strings(strings: List[str]) -> DFA:
             current = trie[current][char]
         accept_states.add(current)
         
-    # Convert to DFA format
+                           
     dfa_transitions = {}
     for st, edges in trie.items():
         st_f = frozenset([st])

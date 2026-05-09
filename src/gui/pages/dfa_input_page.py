@@ -24,7 +24,7 @@ try:
 except ImportError:
     ExecutableNotFound = Exception
 
-# ─── shared styles ────────────────────────────────────────────────────────────
+                                                                                
 _PANEL_SS = """
 QFrame#CalcPanel {
     background-color: #FFFFFF;
@@ -108,9 +108,9 @@ class DFAInputPage(BasePage):
         self._build_results_panel()
         self._input_panel.hide()
 
-    # ════════════════════════════════════════════════════════════════════════
-    #   INPUT PANEL
-    # ════════════════════════════════════════════════════════════════════════
+                                                                              
+                   
+                                                                              
     def _build_input_panel(self) -> None:
         self._input_panel = QFrame()
         self._input_panel.setObjectName("CalcPanel")
@@ -120,7 +120,7 @@ class DFAInputPage(BasePage):
         layout.setContentsMargins(24, 18, 24, 18)
         layout.setSpacing(14)
 
-        # ── header display ────────────────────────────────────────────
+                                                                        
         disp = QFrame()
         disp.setObjectName("DisplayFrame")
         disp.setStyleSheet("""
@@ -146,20 +146,20 @@ class DFAInputPage(BasePage):
         disp_lay.addLayout(col, 1)
         layout.addWidget(disp)
 
-        # ── error label ───────────────────────────────────────────────
+                                                                        
         self._error_lbl = QLabel("")
         self._error_lbl.setStyleSheet("color: #FF2020; font-size: 10px; font-weight: 700;"
                                       " background: transparent; border: none;")
         self._error_lbl.setVisible(False)
         layout.addWidget(self._error_lbl)
 
-        # ── configuration grid ──────────────────────────────────────────
+                                                                          
         grid_lay = QGridLayout()
         grid_lay.setSpacing(14)
         grid_lay.setColumnStretch(1, 1)
         grid_lay.setColumnStretch(3, 2)
         
-        # Row 0
+               
         grid_lay.addWidget(QLabel("States:"), 0, 0)
         self._state_spin = QSpinBox()
         self._state_spin.setRange(1, 20)
@@ -194,7 +194,7 @@ class DFAInputPage(BasePage):
         build_btn.clicked.connect(self._build_table)
         grid_lay.addWidget(build_btn, 0, 4)
 
-        # Row 1
+               
         grid_lay.addWidget(QLabel("Start state:"), 1, 0)
         self._start_input = QLineEdit()
         self._start_input.setPlaceholderText("q0")
@@ -217,7 +217,7 @@ class DFAInputPage(BasePage):
 
         layout.addLayout(grid_lay)
 
-        # ── transition table ──────────────────────────────────────────
+                                                                        
         self._trans_table = QTableWidget()
         self._trans_table.setEditTriggers(QAbstractItemView.EditTrigger.AllEditTriggers)
         self._trans_table.setStyleSheet(_TABLE_CELL_SS)
@@ -225,7 +225,7 @@ class DFAInputPage(BasePage):
         self._trans_table.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         layout.addWidget(self._trans_table, 1)
 
-        # ── submit ────────────────────────────────────────────────────
+                                                                        
         submit_btn = QPushButton("ANALYSE DFA  ▶")
         submit_btn.setFixedHeight(40)
         submit_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -240,7 +240,7 @@ class DFAInputPage(BasePage):
         layout.addWidget(submit_btn)
 
         self.layout().addWidget(self._input_panel)
-        # Build default 3-state / {a,b} table immediately
+                                                         
         QTimer.singleShot(0, self._build_table)
 
     def _build_table(self) -> None:
@@ -260,24 +260,24 @@ class DFAInputPage(BasePage):
         self._trans_table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         self._trans_table.verticalHeader().setDefaultSectionSize(32)
 
-        # Pre-fill with empty items
+                                   
         for r in range(n):
             for c in range(len(symbols)):
                 it = QTableWidgetItem("")
                 it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self._trans_table.setItem(r, c, it)
 
-        # Auto-fill start/accept suggestions
+                                            
         if not self._start_input.text().strip():
             self._start_input.setText("q0")
         if not self._accept_input.text().strip() and n > 0:
             self._accept_input.setText(f"q{n-1}")
 
-    # ════════════════════════════════════════════════════════════════════════
-    #   EVALUATE
-    # ════════════════════════════════════════════════════════════════════════
+                                                                              
+                
+                                                                              
     def _evaluate(self) -> None:
-        # ── parse states from table headers ──────────────────────────
+                                                                       
         n = self._trans_table.rowCount()
         symbols = [
             self._trans_table.horizontalHeaderItem(c).text()
@@ -304,7 +304,7 @@ class DFAInputPage(BasePage):
             self._show_error(f"Unknown accept states: {', '.join(sorted(unknown))}")
             return
 
-        # ── read transition table ─────────────────────────────────────
+                                                                        
         transitions: Dict[Tuple[str, str], str] = {}
         for r, sname in enumerate(state_names):
             for c, sym in enumerate(symbols):
@@ -313,29 +313,29 @@ class DFAInputPage(BasePage):
                 if cell and cell in state_names:
                     transitions[(sname, sym)] = cell
 
-        # ── build DFA object ──────────────────────────────────────────
+                                                                        
         try:
             dfa = build_dfa_from_table(state_names, symbols, transitions, start, accept_states)
         except Exception as e:
             self._show_error(f"DFA build error: {e}")
             return
 
-        # ── derive regex via state elimination ────────────────────────
+                                                                        
         regex_str = dfa_to_regex(state_names, symbols, transitions, start, accept_states)
 
-        # ── minimise ──────────────────────────────────────────────────
+                                                                        
         try:
             min_dfa = minimize_dfa(dfa)
         except Exception:
             min_dfa = dfa
         self._min_dfa = min_dfa
 
-        # ── downstream analysis ───────────────────────────────────────
+                                                                        
         cfg = build_cfg(min_dfa)
         strings = generate_strings(min_dfa, count=5)
-        desc = describe_language(min_dfa, None, strings, regex_str)  # type: ignore
+        desc = describe_language(min_dfa, None, strings, regex_str)                
 
-        # ── populate tabs ─────────────────────────────────────────────
+                                                                        
         self._populate_regex_tab(regex_str)
         self._populate_dfa_tab(dfa)
         self._populate_min_dfa_tab(min_dfa)
@@ -345,9 +345,9 @@ class DFAInputPage(BasePage):
         self._results_expr_label.setText(f"DFA  →  REGEX: {regex_str}")
         self._show_results_panel()
 
-    # ════════════════════════════════════════════════════════════════════════
-    #   RESULTS PANEL
-    # ════════════════════════════════════════════════════════════════════════
+                                                                              
+                     
+                                                                              
     def _build_results_panel(self) -> None:
         self._results_panel = QFrame()
         self._results_panel.setObjectName("ResultsPanel")
@@ -360,7 +360,7 @@ class DFAInputPage(BasePage):
         rl.setContentsMargins(10, 10, 10, 10)
         rl.setSpacing(8)
 
-        # header
+                
         hdr = QHBoxLayout()
         self._btn_return = QPushButton("← BACK")
         self._btn_return.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -380,7 +380,7 @@ class DFAInputPage(BasePage):
         hdr.addWidget(self._results_expr_label, 1)
         rl.addLayout(hdr)
 
-        # tabs
+              
         self._results_tabs = QTabWidget()
         self._results_tabs.setStyleSheet(_TAB_SS)
         self._results_tabs.setSizePolicy(
@@ -415,7 +415,7 @@ class DFAInputPage(BasePage):
         self._results_panel.hide()
         self._input_panel.show()
 
-    # ── regex tab ─────────────────────────────────────────────────────────
+                                                                            
     def _build_regex_tab(self) -> None:
         lay = QVBoxLayout(self._tab_regex)
         lay.setContentsMargins(16, 16, 16, 16)
@@ -448,7 +448,7 @@ class DFAInputPage(BasePage):
     def _populate_regex_tab(self, regex_str: str) -> None:
         self._regex_result_lbl.setText(regex_str if regex_str else "∅")
 
-    # ── automata tab (reused for DFA and Min DFA) ─────────────────────────
+                                                                            
     def _build_automata_tab(self, tab: QWidget) -> None:
         lay = QVBoxLayout(tab)
         lay.setContentsMargins(8, 8, 8, 8)
@@ -568,7 +568,7 @@ class DFAInputPage(BasePage):
         table.setHorizontalHeaderLabels(col_labels)
         table.setVerticalHeaderLabels(row_labels)
 
-    # ── props tab ─────────────────────────────────────────────────────────
+                                                                            
     def _build_props_tab(self) -> None:
         outer = QVBoxLayout(self._tab_props)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -620,7 +620,7 @@ class DFAInputPage(BasePage):
         self._strings_label.setText(", ".join(strings) if strings else "None")
         self._desc_label.setText(desc)
 
-    # ── simulator tab ─────────────────────────────────────────────────────
+                                                                            
     def _build_sim_tab(self) -> None:
         lay = QVBoxLayout(self._tab_sim)
         lay.setContentsMargins(8, 8, 8, 8)
@@ -773,7 +773,7 @@ class DFAInputPage(BasePage):
             pass
         self._sim_current_step += 1
 
-    # ─── error helpers ────────────────────────────────────────────────────
+                                                                            
     def _show_error(self, msg: str) -> None:
         self._error_lbl.setText(f"⚠ {msg}")
         self._error_lbl.setVisible(True)
@@ -783,7 +783,7 @@ class DFAInputPage(BasePage):
         self._error_lbl.setText("")
         self._error_lbl.setVisible(False)
 
-    # ─── animation (matches Regex page) ──────────────────────────────────
+                                                                           
     def play_enter_animation(self) -> None:
         self._panel_shown = False
         self._input_panel.hide()
