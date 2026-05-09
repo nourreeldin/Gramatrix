@@ -1,7 +1,7 @@
-from src.regex_module.preprocessor import expand
-from src.regex_module.validator import validate_expanded
-from src.regex_module.tokenizer import tokenize
-from src.regex_module.parser import parse
+from src.core.preprocessor import expand
+from src.core.validator import validate_expanded
+from src.core.tokenizer import tokenize
+from src.core.parser import parse
 
 def test_full_pipeline():
     expr = "a+b^2"

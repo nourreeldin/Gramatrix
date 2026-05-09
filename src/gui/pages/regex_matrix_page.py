@@ -15,18 +15,18 @@ import tempfile
 
 from .base_page import BasePage
 from ..fonts import mi
-from regex_module.preprocessor import (
+from core.preprocessor import (
     expand, to_display, validate, PreprocessorError,
 )
-from regex_module.validator  import validate_expanded
-from regex_module.tokenizer  import tokenize as tokenize_expanded
-from regex_module.parser     import parse
-from regex_module.nfa        import build_nfa
-from regex_module.dfa        import build_dfa
-from regex_module.dfa_minimizer import minimize_dfa
-from regex_module.cfg        import build_cfg
-from regex_module.string_generator import generate_strings
-from regex_module.english_phrase import describe_language
+from core.validator  import validate_expanded
+from core.tokenizer  import tokenize as tokenize_expanded
+from core.parser     import parse
+from core.nfa        import build_nfa
+from core.dfa        import build_dfa
+from core.dfa_minimizer import minimize_dfa
+from core.cfg        import build_cfg
+from core.string_generator import generate_strings
+from core.english_phrase import describe_language
 from graphviz.backend.execute import ExecutableNotFound
 
 
@@ -62,7 +62,7 @@ class RegexMatrixPage(BasePage):
 
     def __init__(self, parent=None):
         super().__init__(
-            title="Regex Matrix",
+            title="Regex",
             icon=mi.CODE,
             subtitle="// pattern studio initialized",
             parent=parent,

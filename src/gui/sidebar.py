@@ -18,16 +18,11 @@ _C_ACTIVE   = "#FFE000"
 _C_EXIT_NRM = "#FF3C3C"
 _C_EXIT_HOV = "#FFFFFF"
 NAV_ITEMS = [
-    ("nexus",    "HOME",         "Nexus",                    "MAIN"),
-    ("temporal", "HISTORY",      "Temporal Logs",            "MAIN"),
-    ("regex",    "CODE",         "Regex Matrix",             "STUDIOS"),
-    ("cfg",      "ACCOUNT_TREE", "Context-Free Grid",        "STUDIOS"),
-    ("lexicon",  "AUTO_AWESOME", "Lexicon Emitter",          "STUDIOS"),
-    ("dialect",  "EXPLORE",      "Dialect Probe",            "STUDIOS"),
-    ("dfa",      "ADJUST",       "Deterministic Sector",     "AUTOMATA FORGE"),
-    ("nfa",      "SCATTER_PLOT", "Non-Deterministic Sector", "AUTOMATA FORGE"),
-    ("archives", "FOLDER",       "Archives",                 "RESOURCES"),
-    ("docs",     "DESCRIPTION",  "Documentation",            "RESOURCES"),
+    ("regex",    "CODE",         "Regex"),
+    ("dfa",      "ADJUST",       "Finite Automata"),
+    ("cfg",      "ACCOUNT_TREE", "Context Free Grammar"),
+    ("dialect",  "EXPLORE",      "English Phrase"),
+    ("lexicon",  "AUTO_AWESOME", "String Generations"),
 ]
 
 class _NavBtnFilter(QObject):
@@ -171,20 +166,7 @@ class Sidebar(QFrame):
         self._group = QButtonGroup(self)
         self._group.setExclusive(True)
 
-        current_section = None
-        for key, icon_attr, label, section in NAV_ITEMS:
-            if section != current_section:
-                sec_lbl = QLabel(section)
-                sec_lbl.setObjectName("SectionLabel")
-                sec_lbl.setFont(QFont("Segoe UI", 8, QFont.Weight.Bold))
-                sec_lbl.setStyleSheet(
-                    "color: #00E5CC; background: transparent; "
-                    "letter-spacing: 3px; padding: 10px 14px 2px 14px;"
-                )
-                self._section_labels.append(sec_lbl)
-                nav_layout.addWidget(sec_lbl)
-                current_section = section
-
+        for key, icon_attr, label in NAV_ITEMS:
             glyph = getattr(mi, icon_attr)
             btn   = self._make_nav_btn(key, glyph, label)
             btn.clicked.connect(lambda _=False, k=key: self.navigate.emit(k))
@@ -241,7 +223,7 @@ class Sidebar(QFrame):
         exit_layout.addWidget(exit_text)
         outer.addWidget(self.exit_btn)
 
-        self._buttons["nexus"].setChecked(True)
+        self._buttons["regex"].setChecked(True)
         QTimer.singleShot(0, self._refresh_all)
 
     def _make_nav_btn(self, key: str, glyph: str, label: str) -> QPushButton:
@@ -322,9 +304,6 @@ class Sidebar(QFrame):
         self.collapsed_changed.emit(self._collapsed)
 
     def _apply_collapsed(self) -> None:
-        for sec_lbl in self._section_labels:
-            sec_lbl.setVisible(False)
-
         self.logo_text.setVisible(False)
         self._logo_icon.setFixedWidth(24)
         self._logo_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -362,9 +341,6 @@ class Sidebar(QFrame):
             self._exit_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def _apply_expanded(self) -> None:
-        for sec_lbl in self._section_labels:
-            sec_lbl.setVisible(True)
-
         self.logo_text.setVisible(True)
         self._logo_icon.setFixedWidth(24)
         self._logo_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)

@@ -3,4 +3,4 @@ from ..fonts import mi
 
 class ContextFreeGridPage(BasePage):
     def __init__(self, parent=None):
-        super().__init__(title="Context-Free Grid", icon=mi.ACCOUNT_TREE, subtitle="// CFG studio", parent=parent)
+        super().__init__(title="Context Free Grammar", icon=mi.ACCOUNT_TREE, subtitle="// CFG studio", parent=parent)

@@ -3,4 +3,4 @@ from ..fonts import mi
 
 class DeterministicSectorPage(BasePage):
     def __init__(self, parent=None):
-        super().__init__(title="Deterministic Sector", icon=mi.ADJUST, subtitle="// DFA module", parent=parent)
+        super().__init__(title="Finite Automata", icon=mi.ADJUST, subtitle="// DFA module", parent=parent)

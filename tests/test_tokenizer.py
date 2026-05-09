@@ -1,4 +1,4 @@
-from src.regex_module.tokenizer import tokenize
+from src.core.tokenizer import tokenize
 
 def test_simple_tokens():
     tokens = tokenize("a+b")

@@ -1,6 +1,6 @@
-from src.regex_module.preprocessor import expand
-from src.regex_module.tokenizer import tokenize
-from src.regex_module.parser import parse, UnionNode, ConcatNode, StarNode, LetterNode
+from src.core.preprocessor import expand
+from src.core.tokenizer import tokenize
+from src.core.parser import parse, UnionNode, ConcatNode, StarNode, LetterNode
 
 def test_letter_node():
     tree = parse(tokenize("a"))

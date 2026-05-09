@@ -8,10 +8,8 @@ from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QFont
 from .sidebar import Sidebar
 from .fonts import mi, material_font
 from .pages import (
-    NexusPage, TemporalLogsPage, RegexMatrixPage,
-    DeterministicSectorPage, NonDeterministicSectorPage,
-    ContextFreeGridPage, LexiconEmitterPage, DialectProbePage,
-    ArchivesPage, DocumentationPage,
+    RegexMatrixPage, DFAInputPage,
+    CFGInputPage, EnglishPhrasePage, StringInputPage,
 )
 
 def _make_app_icon(size: int = 64) -> QIcon:
@@ -79,22 +77,16 @@ class MainWindow(QMainWindow):
         layout.addWidget(content_panel, 1)
 
         self._pages = {
-            "nexus":    NexusPage(),
-            "temporal": TemporalLogsPage(),
             "regex":    RegexMatrixPage(),
-            "cfg":      ContextFreeGridPage(),
-            "lexicon":  LexiconEmitterPage(),
-            "dialect":  DialectProbePage(),
-            "dfa":      DeterministicSectorPage(),
-            "nfa":      NonDeterministicSectorPage(),
-            "archives": ArchivesPage(),
-            "docs":     DocumentationPage(),
+            "dfa":      DFAInputPage(),
+            "cfg":      CFGInputPage(),
+            "dialect":  EnglishPhrasePage(),
+            "lexicon":  StringInputPage(),
         }
         for page in self._pages.values():
             self.stack.addWidget(page)
-            page.back_requested.connect(lambda: self.go_to("nexus"))
 
-        self.go_to("nexus", animate=False)
+        self.go_to("regex", animate=False)
 
     def go_to(self, key: str, animate: bool = True) -> None:
         if key not in self._pages:

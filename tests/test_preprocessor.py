@@ -1,5 +1,5 @@
 import pytest
-from src.regex_module.preprocessor import expand, PreprocessorError
+from src.core.preprocessor import expand, PreprocessorError
 
 def test_basic_concat():
     assert expand("ab") == "ab"

@@ -6,30 +6,18 @@ from PyQt6.QtWidgets import (
 from ..fonts import mi, material_font
 
 class BasePage(QWidget):
-    back_requested = pyqtSignal()
 
-    def __init__(self, title: str, icon: str, subtitle: str = "", parent=None, isBackBtnVisible=True):
+    def __init__(self, title: str, icon: str, subtitle: str = "", parent=None):
         super().__init__(parent)
         self._title_text = title
         self._icon_text = icon
         self._subtitle_text = subtitle or "// system module ready"
-        self.setBackBtnVisible = isBackBtnVisible
         self._build_ui()
 
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
         root.setContentsMargins(28, 24, 28, 28)
         root.setSpacing(18)
-
-        top = QHBoxLayout()
-        self.back_btn = QPushButton("Back")
-        self.back_btn.setObjectName("BackButton")
-        self.back_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.back_btn.clicked.connect(self.back_requested.emit)
-        top.addWidget(self.back_btn)
-        top.addStretch(1)
-        root.addLayout(top)
-        self.back_btn.setVisible(self.setBackBtnVisible)
 
         self.card = QFrame()
         self.card.setObjectName("PageCard")

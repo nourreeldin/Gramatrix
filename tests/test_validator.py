@@ -1,6 +1,6 @@
 import pytest
-from src.regex_module.validator import validate_expanded
-from src.regex_module.preprocessor import PreprocessorError
+from src.core.validator import validate_expanded
+from src.core.preprocessor import PreprocessorError
 
 def test_valid_expression():
     validate_expanded("a+b")
