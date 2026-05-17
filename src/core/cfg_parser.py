@@ -5,11 +5,11 @@ from .nfa import NFA, NFAFragment, _reset_counter, _new_state
 class CFGParseError(Exception):
     pass
 
-def parse_right_linear_cfg(cfg_text: str) -> NFA:
+def parse_cfg(cfg_text: str) -> NFA:
     """
-    Parses a right-linear CFG into an NFA.
+    Parses a Context-Free Grammar into an NFA using a regular over-approximation.
     Expected format:
-    S → a S | b A | ε
+    S → a S a | b A | Λ
     A → a
     """
     lines = [line.strip() for line in cfg_text.split('\n') if line.strip()]
@@ -34,44 +34,70 @@ def parse_right_linear_cfg(cfg_text: str) -> NFA:
         prods = [p.strip() for p in right.split('|')]
         rules.setdefault(left, []).extend(prods)
 
+    # Parity-preserving heuristic for S -> u S u | Λ (like S -> aSa | Λ)
+    for nt, prods in rules.items():
+        is_candidate = True
+        has_lambda = False
+        symmetric = []
+        for p in prods:
+            p_clean = p.replace(' ', '')
+            if p_clean in ("Λ", "e", "epsilon", "E"):
+                has_lambda = True
+            else:
+                parts = p_clean.split(nt)
+                if len(parts) == 2 and parts[0] == parts[1] and parts[0].islower() and len(parts[0]) > 0:
+                    symmetric.append(parts[0])
+                else:
+                    is_candidate = False
+                    break
+        
+        if is_candidate and has_lambda and symmetric:
+            rewritten = []
+            for p in prods:
+                p_clean = p.replace(' ', '')
+                if p_clean in ("Λ", "e", "epsilon", "E"):
+                    rewritten.append(p)
+                else:
+                    parts = p_clean.split(nt)
+                    rewritten.append(f"{parts[0]}{parts[0]}{nt}")
+            rules[nt] = rewritten
+
     _reset_counter(0)
     
-    nt_to_state: Dict[str, int] = {}
-    for nt in rules.keys():
-        nt_to_state[nt] = _new_state()
-
-    accept_state = _new_state()
-    alphabet: Set[str] = set()
-
-    frag = NFAFragment(start=nt_to_state[first_nt], accept=accept_state)
+    nt_start: Dict[str, int] = {}
+    nt_accept: Dict[str, int] = {}
     
-                                                                                       
-                                           
+    for nt in rules.keys():
+        nt_start[nt] = _new_state()
+        nt_accept[nt] = _new_state()
+
+    alphabet: Set[str] = set()
+    frag = NFAFragment(start=nt_start[first_nt], accept=nt_accept[first_nt])
+
     for nt, prods in rules.items():
-        src = nt_to_state[nt]
         for prod_raw in prods:
             prod = prod_raw.replace(' ', '')
-            if prod == "ε":
-                frag.add(src, "ε", accept_state)
-            elif len(prod) == 1:
-                                          
-                if prod.isupper():
-                    if prod not in nt_to_state:
-                        nt_to_state[prod] = _new_state()
-                    frag.add(src, "ε", nt_to_state[prod])
-                else:
-                    alphabet.add(prod)
-                    frag.add(src, prod, accept_state)
-            elif len(prod) == 2:
-                    
-                t, n = prod[0], prod[1]
-                if t.isupper() or not n.isupper():
-                    raise CFGParseError(f"Right-linear rules must be form 'aB'. Found: '{prod}'")
-                alphabet.add(t)
-                if n not in nt_to_state:
-                    nt_to_state[n] = _new_state()
-                frag.add(src, t, nt_to_state[n])
+            if prod in ("Λ", "e", "epsilon", "E"):
+                frag.add(nt_start[nt], "Λ", nt_accept[nt])
             else:
-                raise CFGParseError(f"Rule '{prod}' is not strictly right-linear (e.g. 'aB', 'a', 'ε', 'B').")
+                curr = nt_start[nt]
+                for i, sym in enumerate(prod):
+                    is_last = (i == len(prod) - 1)
+                    next_s = nt_accept[nt] if is_last else _new_state()
+                    
+                    if sym.isupper():
+                        if sym not in nt_start:
+                            nt_start[sym] = _new_state()
+                            nt_accept[sym] = _new_state()
+                        frag.add(curr, "Λ", nt_start[sym])
+                        frag.add(nt_accept[sym], "Λ", next_s)
+                    else:
+                        if sym not in ('Λ', 'e', 'epsilon', 'E'):
+                            alphabet.add(sym)
+                            frag.add(curr, sym, next_s)
+                        else:
+                            frag.add(curr, "Λ", next_s)
+                            
+                    curr = next_s
 
     return NFA(frag, alphabet)

@@ -36,7 +36,7 @@ def generate_strings(dfa: DFA, max_len: int = MAX_LEN, count: int = 5) -> List[s
         state, path = queue.popleft()
 
         if state in dfa.accept_states:
-            results.append(path if path else "ε")
+            results.append(path if path else "Λ")
 
         if len(path) >= max_len:
             continue
@@ -105,7 +105,7 @@ def generate_random_strings(
                 break
 
         if state in dfa.accept_states:
-            s = "".join(path) if path else "ε"
+            s = "".join(path) if path else "Λ"
             if s not in seen:
                 seen.add(s)
                 collected.append(s)

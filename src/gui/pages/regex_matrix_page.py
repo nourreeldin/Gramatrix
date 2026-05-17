@@ -498,7 +498,7 @@ class RegexMatrixPage(BasePage):
         self._tab_props = QWidget()
         self._tab_sim = QWidget()
         
-        self._results_tabs.addTab(self._tab_nfa, "ε-NFA")
+        self._results_tabs.addTab(self._tab_nfa, "Λ-NFA")
         self._results_tabs.addTab(self._tab_dfa, "DFA")
         self._results_tabs.addTab(self._tab_min_dfa, "Min DFA")
         self._results_tabs.addTab(self._tab_props, "Properties")
@@ -857,7 +857,7 @@ class RegexMatrixPage(BasePage):
             self._tab_nfa.img_label.setStyleSheet("color: #FF2020; font-size: 14px; font-weight: bold;")
         
         table_data = nfa.transition_table()
-        symbols = sorted(nfa.alphabet) + ["ε"]
+        symbols = sorted(nfa.alphabet) + ["Λ"]
         self._setup_table(self._tab_nfa.table, [str(r["state"]) for r in table_data], symbols)
         
         for r_idx, row in enumerate(table_data):

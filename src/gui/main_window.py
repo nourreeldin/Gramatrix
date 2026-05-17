@@ -9,7 +9,7 @@ from .sidebar import Sidebar
 from .fonts import mi, material_font
 from .pages import (
     RegexMatrixPage, DFAInputPage,
-    CFGInputPage, EnglishPhrasePage, StringInputPage,
+    CFGInputPage, EnglishPhrasePage, StringInputPage, CanvasPage
 )
 
 def _make_app_icon(size: int = 64) -> QIcon:
@@ -79,6 +79,7 @@ class MainWindow(QMainWindow):
         self._pages = {
             "regex":    RegexMatrixPage(),
             "dfa":      DFAInputPage(),
+            "canvas":   CanvasPage(),
             "cfg":      CFGInputPage(),
             "dialect":  EnglishPhrasePage(),
             "lexicon":  StringInputPage(),

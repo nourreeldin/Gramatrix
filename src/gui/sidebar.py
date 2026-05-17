@@ -20,6 +20,7 @@ _C_EXIT_HOV = "#FFFFFF"
 NAV_ITEMS = [
     ("regex",    "CODE",         "Regex"),
     ("dfa",      "ADJUST",       "Finite Automata"),
+    ("canvas",   "PALETTE",      "Canvas"),
     ("cfg",      "ACCOUNT_TREE", "Context Free Grammar"),
     ("dialect",  "EXPLORE",      "English Phrase"),
     ("lexicon",  "AUTO_AWESOME", "String Generations"),

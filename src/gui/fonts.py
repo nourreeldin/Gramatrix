@@ -18,6 +18,7 @@ class _MI:
     DIAMOND       = "\ue8f4"   
     MENU          = "\ue5d2"   
     BACK          = "\ue5cb"   
+    PALETTE       = "\ue40a"   
 
 mi = _MI()
 

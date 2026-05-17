@@ -26,7 +26,7 @@ def _has_self_loop(dfa: DFA, sym: str) -> List[str]:
 
 
 def _get_fixed_length_strings(samples: List[str]) -> Optional[int]:
-    real = [s for s in samples if s != "ε"]
+    real = [s for s in samples if s != "Λ"]
     if not real:
         return None
     lengths = {len(s) for s in real}
@@ -47,7 +47,7 @@ def _detect_repetition(dfa: DFA, alphabet: List[str]) -> Optional[str]:
 
 
 def _detect_prefix(samples: List[str]) -> Optional[str]:
-    real = [s for s in samples if s != "ε" and s]
+    real = [s for s in samples if s != "Λ" and s]
     if not real:
         return None
     prefix = real[0]
@@ -60,7 +60,7 @@ def _detect_prefix(samples: List[str]) -> Optional[str]:
 
 
 def _detect_suffix(samples: List[str]) -> Optional[str]:
-    real = [s for s in samples if s != "ε" and s]
+    real = [s for s in samples if s != "Λ" and s]
     if not real:
         return None
     suffix = real[0]
@@ -175,9 +175,9 @@ def describe_language(
         parts.append("This language is defined over the empty alphabet.")
 
     if info["accepts_epsilon"]:
-        parts.append("The empty string (ε) is accepted.")
+        parts.append("The empty string (Λ) is accepted.")
     else:
-        parts.append("The empty string (ε) is not accepted.")
+        parts.append("The empty string (Λ) is not accepted.")
 
     if not info["has_cycles"]:
         parts.append(
@@ -190,7 +190,7 @@ def describe_language(
 
     if info["repetition_char"] and info["has_cycles"]:
         c = info["repetition_char"]
-        eps_note = "including ε" if info["accepts_epsilon"] else "excluding ε"
+        eps_note = "including Λ" if info["accepts_epsilon"] else "excluding Λ"
         parts.append(
             f"It accepts any number of repetitions of '{c}' ({eps_note}), "
             f"i.e., strings of the form '{c}*'."
@@ -199,7 +199,7 @@ def describe_language(
     elif info["fixed_length"] is not None and not info["has_cycles"]:
         fl = info["fixed_length"]
         if fl == 0:
-            parts.append("All accepted strings have length zero (ε only).")
+            parts.append("All accepted strings have length zero (Λ only).")
         else:
             parts.append(
                 f"All accepted strings have exactly {fl} character(s)."

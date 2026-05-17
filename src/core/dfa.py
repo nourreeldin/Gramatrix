@@ -55,7 +55,7 @@ class DFA:
             else:
                 steps.append({
                     "step": 0,
-                    "char": "ε",
+                    "char": "Λ",
                     "from_state": self.label(self.start),
                     "to_state": self.label(self.start),
                     "dead": False,

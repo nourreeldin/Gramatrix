@@ -13,7 +13,7 @@ from PyQt6.QtGui import QFont, QPixmap
 
 from .base_page import BasePage
 from ..fonts import mi
-from core.cfg_parser import parse_right_linear_cfg
+from core.cfg_parser import parse_cfg
 from core.nfa import NFA
 from core.dfa import build_dfa
 from core.dfa_minimizer import minimize_dfa
@@ -97,7 +97,7 @@ class CFGInputPage(BasePage):
 
     def __init__(self, parent=None):
         super().__init__(title="Context Free Grammar", icon=mi.ACCOUNT_TREE,
-                         subtitle="// Right-Linear grammar input module", parent=parent)
+                         subtitle="// Context-Free Grammar (Regular Approximation) input module", parent=parent)
         self._temp_dir = tempfile.mkdtemp()
         self._min_dfa = None
         self._sim_timer = QTimer()
@@ -232,7 +232,7 @@ class CFGInputPage(BasePage):
         ctrl_grid = QGridLayout()
         ctrl_grid.setSpacing(6)
         
-        ops = [("→", "→"), ("|", "|"), ("ε", "ε"), ("⏎", "\n")]
+        ops = [("→", "→"), ("|", "|"), ("Λ", "Λ"), ("⏎", "\n")]
         for i, (lbl, val) in enumerate(ops):
             b = QPushButton(lbl)
             b.setFixedSize(50, 50)
@@ -403,7 +403,7 @@ class CFGInputPage(BasePage):
             return
 
         try:
-            nfa = parse_right_linear_cfg(self._expression)
+            nfa = parse_cfg(self._expression)
         except Exception as e:
             self._show_error(str(e))
             return
@@ -557,7 +557,7 @@ class CFGInputPage(BasePage):
         lay.addStretch()
 
     def _populate_regex_tab(self, regex_str: str) -> None:
-        self._regex_result_lbl.setText(regex_str if regex_str else "∅")
+        self._regex_result_lbl.setText(regex_str if regex_str else "Φ")
 
                                                                             
     def _build_automata_tab(self, tab: QWidget) -> None:

@@ -446,7 +446,7 @@ class DFAInputPage(BasePage):
         lay.addStretch()
 
     def _populate_regex_tab(self, regex_str: str) -> None:
-        self._regex_result_lbl.setText(regex_str if regex_str else "∅")
+        self._regex_result_lbl.setText(regex_str if regex_str else "Φ")
 
                                                                             
     def _build_automata_tab(self, tab: QWidget) -> None:

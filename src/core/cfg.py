@@ -47,9 +47,22 @@ class CFG:
 def build_cfg(dfa: DFA) -> CFG:
     alphabet = sorted(dfa.alphabet)
 
+    sorted_states = sorted(list(dfa.states), key=lambda s: dfa.label(s))
+    state_to_letter = {}
+    letters = [chr(i) for i in range(ord('A'), ord('Z')+1) if chr(i) != 'S']
+    letter_idx = 0
+    
+    state_to_letter[dfa.start] = "S"
+    for s in sorted_states:
+        if s != dfa.start:
+            if letter_idx < len(letters):
+                state_to_letter[s] = letters[letter_idx]
+                letter_idx += 1
+            else:
+                state_to_letter[s] = f"N_{dfa.label(s)}"
+
     def nt(state: FrozenSet[int]) -> str:
-        lbl = dfa.label(state)
-        return f"N_{lbl}"
+        return state_to_letter[state]
 
     cfg = CFG(
         start_symbol=nt(dfa.start),
@@ -60,10 +73,10 @@ def build_cfg(dfa: DFA) -> CFG:
         for sym in alphabet:
             nxt = dfa.transitions.get((s, sym))
             if nxt is not None:
-                cfg.add_rule(nt(s), f"{sym} {nt(nxt)}")
+                cfg.add_rule(nt(s), f"{sym}{nt(nxt)}")
 
         if s in dfa.accept_states:
-            cfg.add_rule(nt(s), "ε")
+            cfg.add_rule(nt(s), "Λ")
 
         if nt(s) not in cfg.rules:
             cfg.rules[nt(s)] = []

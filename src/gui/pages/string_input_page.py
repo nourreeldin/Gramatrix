@@ -168,7 +168,7 @@ class StringInputPage(BasePage):
 
         vlay.addWidget(QLabel("Enter strings (separated by commas or newlines):"))
         self._strings_input = QTextEdit()
-        self._strings_input.setPlaceholderText("e.g.\naaa\nab\nba\nε")
+        self._strings_input.setPlaceholderText("e.g.\naaa\nab\nba\nΛ")
         self._strings_input.setStyleSheet(
             "QTextEdit { background:#FFFFFF; border:2px solid #111111; padding:8px;"
             " font-family:'Consolas'; font-weight:700; font-size:14px; }"
@@ -222,17 +222,117 @@ class StringInputPage(BasePage):
 
                                                                        
         clean_strings = []
+        has_ellipsis = False
         for t in tokens:
-            if t.lower() in ['ε', 'epsilon', 'lambda']:
-                clean_strings.append("ε")
+            if t == '...':
+                has_ellipsis = True
+            elif t.lower() in ['Λ', 'epsilon', 'lambda']:
+                clean_strings.append("Λ")
             else:
                 clean_strings.append(t)
 
+        def infer_regex(strings: list[str]) -> str:
+            clean = set(s if s != '' else 'Λ' for s in strings)
+            if not has_ellipsis:
+                return '+'.join(sorted(list(clean)))
+                
+            max_len = max((len(s) if s != 'Λ' else 0) for s in clean)
+            chars = set(c for s in clean for c in s if c != 'Λ')
+            if not chars: return 'Λ'
+            substrings = set()
+            for s in clean:
+                if s != 'Λ':
+                    for i in range(len(s)):
+                        substrings.add(s[i:i+1])
+                        if i+1 < len(s): substrings.add(s[i:i+2])
+            if not substrings: substrings = {'a'}
+
+            def infer_single(subset):
+                best_r = None
+                best_s = float('inf')
+                def evaluate(regex_str, G):
+                    nonlocal best_r, best_s
+                    if subset.issubset(G):
+                        diff = len(G) - len(subset)
+                        if diff == 0:  
+                            score = len(regex_str)
+                            if score < best_s:
+                                best_s = score
+                                best_r = regex_str
+                for x in substrings:
+                    G1 = set()
+                    for i in range(max_len + 2):
+                        s = x * i
+                        if len(s) <= max_len: G1.add(s if s else 'Λ')
+                    evaluate(f'({x})*' if len(x)>1 else f'{x}*', G1)
+                    for y in substrings:
+                        G3 = set()
+                        for i in range(max_len + 2):
+                            s = y + (x * i)
+                            if len(s) <= max_len: G3.add(s if s else 'Λ')
+                        evaluate(f'{y}({x})*' if len(x)>1 else f'{y}{x}*', G3)
+                        G5 = set()
+                        for i in range(max_len + 2):
+                            s = x + (y + x) * i
+                            if len(s) <= max_len: G5.add(s if s else 'Λ')
+                        evaluate(f'{x}({y}{x})*', G5)
+                        G2 = set()
+                        for i in range(max_len + 2):
+                            s = (x * i) + y
+                            if len(s) <= max_len: G2.add(s if s else 'Λ')
+                        evaluate(f'({x})*{y}' if len(x)>1 else f'{x}*{y}', G2)
+                        G4 = set()
+                        for i in range(max_len + 2):
+                            s = (x + y) * i
+                            if len(s) <= max_len: G4.add(s if s else 'Λ')
+                        evaluate(f'({x}{y})*', G4)
+                return best_r, best_s
+
+            best_combined = None
+            best_score = float('inf')
+            r1, s1 = infer_single(clean)
+            if r1:
+                best_combined = r1
+                best_score = s1
+
+            lst = list(clean)
+            n = len(lst)
+            if n >= 2 and n <= 15:
+                for i in range(1, (1 << n) - 1):
+                    S1 = set()
+                    S2 = set()
+                    for j in range(n):
+                        if (i & (1 << j)): S1.add(lst[j])
+                        else: S2.add(lst[j])
+                    rA, sA = infer_single(S1)
+                    if rA:
+                        rB, sB = infer_single(S2)
+                        if rB:
+                            comb = '+'.join(sorted([rA, rB]))
+                            score = len(comb)
+                            if score < best_score:
+                                best_score = score
+                                best_combined = comb
+
+            if best_combined:
+                return best_combined
+            return '+'.join(sorted(list(clean)))
+
+        inferred = infer_regex(clean_strings)
         try:
-            dfa = build_dfa_from_strings(clean_strings)
-        except Exception as e:
-            self._show_error(f"DFA build error: {e}")
-            return
+            from core.tokenizer import tokenize
+            from core.parser import parse
+            from core.nfa import build_nfa
+            from core.dfa import build_dfa
+            ast = parse(tokenize(inferred))
+            nfa = build_nfa(ast)
+            dfa = build_dfa(nfa)
+        except Exception:
+            try:
+                dfa = build_dfa_from_strings(clean_strings)
+            except Exception as e:
+                self._show_error(f"DFA build error: {e}")
+                return
             
         try:
             min_dfa = minimize_dfa(dfa)
@@ -412,7 +512,7 @@ class StringInputPage(BasePage):
         lay.addStretch()
 
     def _populate_regex_tab(self, regex_str: str) -> None:
-        self._regex_result_lbl.setText(regex_str if regex_str else "∅")
+        self._regex_result_lbl.setText(regex_str if regex_str else "Φ")
 
                                                                             
     def _build_automata_tab(self, tab: QWidget) -> None:

@@ -10,9 +10,9 @@ def _needs_paren(r: str) -> bool:
     return False
 
 def _concat(a: str, b: str) -> str:
-    if a in ("", "e") and b in ("", "e"): return "e"
-    if a in ("", "e"): return b
-    if b in ("", "e"): return a
+    if a in ("", "Λ") and b in ("", "Λ"): return "Λ"
+    if a in ("", "Λ"): return b
+    if b in ("", "Λ"): return a
     pa = f"({a})" if _needs_paren(a) else a
     pb = f"({b})" if _needs_paren(b) else b
     return pa + pb
@@ -24,7 +24,7 @@ def _union(a: str, b: str) -> str:
     return f"{a}+{b}"
 
 def _star(a: str) -> str:
-    if a in ("", "e", "empty"): return "e"
+    if a in ("", "Λ", "empty"): return "Λ"
     if len(a) == 1 or (a.startswith("(") and a.endswith(")")): return f"{a}*"
     return f"({a})*"
 
@@ -44,14 +44,14 @@ def dfa_to_regex(states: List[str], alphabet: List[str],
     for (src, sym), dst in transitions.items():
         put(src, dst, _union(get(src, dst), sym))
 
-    put(SRC, start, "e")
+    put(SRC, start, "Λ")
     for acc in accept_states:
-        put(acc, DST, _union(get(acc, DST), "e"))
+        put(acc, DST, _union(get(acc, DST), "Λ"))
 
     elim = [s for s in states if s != start] + [start]
     for st in elim:
         loop = get(st, st)
-        sl = _star(loop) if loop != "empty" else "e"
+        sl = _star(loop) if loop != "empty" else "Λ"
         preds = [q for q in list(gnfa) if get(q, st) != "empty" and q != st]
         succs_map = gnfa.get(st, {})
         succs = [q for q in succs_map if q != st and succs_map[q] != "empty"]
@@ -65,4 +65,4 @@ def dfa_to_regex(states: List[str], alphabet: List[str],
             gnfa[q].pop(st, None)
 
     res = get(SRC, DST)
-    return "empty" if res == "empty" else res
+    return "Φ" if res == "empty" else res

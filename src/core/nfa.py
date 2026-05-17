@@ -8,7 +8,7 @@ from .parser import (
     StarNode, ConcatNode, UnionNode,
 )
 
-EPSILON = "ε"
+EPSILON = "Λ"
 
 _counter = 0
 

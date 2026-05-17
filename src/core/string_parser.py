@@ -21,7 +21,7 @@ def build_dfa_from_strings(strings: List[str]) -> DFA:
     trie = {0: {}}
     
     for s in strings:
-        if s == "ε" or s == "":
+        if s == "Λ" or s == "":
             accept_states.add(0)
             continue
             
